@@ -10,6 +10,5 @@ checkver:
   regex: Latest update version number:(?<version>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)
 autoupdate:
   architecture:
-    x86:
-      url: https://dl.xdown.org/windows/i386/xdown-$version.zip
+    x86: https://dl.xdown.org/windows/i386/xdown-$version.zip
 

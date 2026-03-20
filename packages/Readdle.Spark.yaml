@@ -11,7 +11,6 @@ checkver:
   update_version: $major.$minor.$patch
 autoupdate:
   architecture:
-    x64:
-      url: https://downloads.sparkmailapp.com/Spark3/win/dist/$major.$minor.$patch.$build/Spark.exe
+    x64: https://downloads.sparkmailapp.com/Spark3/win/dist/$major.$minor.$patch.$build/Spark.exe
 
 

@@ -1,0 +1,12 @@
+id: chen08209.FlClash
+current_package:
+  version: "0.0.1"
+  architecture:
+    x64:
+      url: https://github.com/chen08209/FlClash/releases/download/v0.0.1/FlClash-0.0.1-windows-amd64-setup.exe
+      hash: ""
+checkver:
+  github: "https://github.com/chen08209/FlClash"
+autoupdate:
+  architecture:
+    x64: https://github.com/chen08209/FlClash/releases/download/v$version/FlClash-$version-windows-amd64-setup.exe

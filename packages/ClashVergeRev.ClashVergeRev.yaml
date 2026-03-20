@@ -1,0 +1,12 @@
+id: ClashVergeRev.ClashVergeRev
+current_package:
+  version: "0.0.1"
+  architecture:
+    x64:
+      url: https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v0.0.1/Clash.Verge_0.0.1_x64-setup.exe
+      hash: ""
+checkver:
+  github: "https://github.com/clash-verge-rev/clash-verge-rev"
+autoupdate:
+  architecture:
+    x64: https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v$version/Clash.Verge_$version_x64-setup.exe

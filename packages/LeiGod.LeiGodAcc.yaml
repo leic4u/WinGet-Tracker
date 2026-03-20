@@ -15,5 +15,4 @@ checkver:
   exclude_pattern: "99"
 autoupdate:
   architecture:
-    x86:
-      url: https://update.leigod.com/soft/leigod/win/$major.0.0.0/LeiGodSetup.$version.exe
+    x86: https://update.leigod.com/soft/leigod/win/$major.0.0.0/LeiGodSetup.$version.exe
