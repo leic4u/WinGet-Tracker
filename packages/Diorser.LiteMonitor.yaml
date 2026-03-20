@@ -6,7 +6,7 @@ current_package:
       url: https://github.com/Diorser/LiteMonitor/releases/download/v0.0.1/LiteMonitor_v0.0.1-win-x64.zip
       hash: ""
 checkver:
-  github: "https://github.com/Diorser/LiteMonitor"
+  url: "https://github.com/Diorser/LiteMonitor"
 autoupdate:
   architecture:
     x64: https://github.com/Diorser/LiteMonitor/releases/download/v$version/LiteMonitor_v$version-win-x64.zip

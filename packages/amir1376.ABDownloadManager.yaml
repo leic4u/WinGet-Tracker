@@ -6,7 +6,7 @@ current_package:
       url: https://github.com/amir1376/ab-download-manager/releases/download/v0.0.1/ABDownloadManager_0.0.1_windows_x64.exe
       hash: ""
 checkver:
-  github: "https://github.com/amir1376/ab-download-manager"
+  url: "https://github.com/amir1376/ab-download-manager"
 autoupdate:
   architecture:
     x64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_x64.exe
