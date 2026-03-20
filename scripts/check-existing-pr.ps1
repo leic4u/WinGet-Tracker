@@ -23,7 +23,7 @@ function Test-WingetPRExists {
             --repo microsoft/winget-pkgs `
             --state all `
             --search "$query" `
-            --json number,title,headRefName,author,merged `
+            --json number,title,headRefName,author,state,mergedAt `
             2>&1
         
         # 检查是否是有效的 JSON（不是错误信息）
@@ -32,19 +32,24 @@ function Test-WingetPRExists {
             return $false
         }
         
-        # 检查输出是否以 [ 开头（JSON 数组），如果不是则可能是错误信息
+        # 将输出转换为字符串并清理
         $outputStr = $prsJson | Out-String
-        if (-not $outputStr.Trim().StartsWith("[")) {
-            Write-Warning "gh command returned non-JSON response: $outputStr"
-            return $false
+        $outputStr = $outputStr.Trim()
+
+        # 尝试提取 JSON 部分（移除可能的警告信息）
+        $jsonStart = $outputStr.IndexOf('[')
+        $jsonEnd = $outputStr.LastIndexOf(']')
+
+        if ($jsonStart -ge 0 -and $jsonEnd -gt $jsonStart) {
+            # 提取 JSON 数组部分
+            $jsonStr = $outputStr.Substring($jsonStart, $jsonEnd - $jsonStart + 1)
+            $data = $jsonStr | ConvertFrom-Json -ErrorAction SilentlyContinue
         }
-        
-        $data = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if (-not $data) {
-            Write-Warning "Failed to parse JSON response from gh command"
-            return $false
+        else {
+            # 直接尝试解析
+            $data = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
         }
-        
+
         # 遍历检查结果
         foreach ($pr in $data) {
             # 检查 PR 标题是否匹配
@@ -53,8 +58,8 @@ function Test-WingetPRExists {
             # 检查分支名是否匹配
             $branchMatch = $pr.headRefName -match [regex]::Escape($id) -or $pr.headRefName -match [regex]::Escape($version)
             
-            # 检查是否已合并
-            $isMerged = $pr.merged -eq $true
+            # 检查是否已合并（通过 state 为 MERGED 或 mergedAt 有值）
+            $isMerged = ($pr.state -eq 'MERGED') -or ($null -ne $pr.mergedAt)
             
             if (($titleMatch -or $branchMatch) -or $isMerged) {
                 $status = if ($isMerged) { "merged" } else { "open/closed" }
