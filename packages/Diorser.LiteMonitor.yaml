@@ -1,12 +1,13 @@
 id: Diorser.LiteMonitor
 current_package:
-  version: "0.0.1"
+  version: "1.3.4"
   architecture:
     x64:
-      url: https://github.com/Diorser/LiteMonitor/releases/download/v0.0.1/LiteMonitor_v0.0.1-win-x64.zip
-      hash: ""
+      url: https://github.com/Diorser/LiteMonitor/releases/download/v1.3.4/LiteMonitor_v1.3.4-win-x64.zip
+      hash: CB8A094488819FB8591CBFA4FF1A641A58D83A449EC3E74CFA38E49004215E5A
 checkver:
   url: "https://github.com/Diorser/LiteMonitor"
 autoupdate:
   architecture:
     x64: https://github.com/Diorser/LiteMonitor/releases/download/v$version/LiteMonitor_v$version-win-x64.zip
+
