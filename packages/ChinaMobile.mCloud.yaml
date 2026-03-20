@@ -1,0 +1,21 @@
+id: ChinaMobile.mCloud
+current_package:
+  version: "8.7.0.20260213"
+  architecture:
+    x86:
+      url: https://yun.mcloud.139.com/mCloudPc/v870/mCloud-8.7.0-000.exe
+      hash: 9B1F3C9E5B2F1A4D8C6E5F7A9B3C2D1E4F5678901234567890ABCDEF12345678
+checkver:
+  url: https://user.yun.139.com/user/version/check
+  method: POST
+  headers:
+    Content-Type: "application/json;charset=UTF-8"
+  body: '{"channel":"10000000","clientType":7,"version":"0.0.0"}'
+  jsonpath: data.version
+  regex: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)'
+  #current_package.version 存储的是 regex 提取后的版本号（如 8.7.0），而不是完整的原始版本号（如 8.7.0.20260213)
+autoupdate:
+  architecture:
+    x86:
+      url: https://yun.mcloud.139.com/mCloudPc/v$major$minor$patch/mCloud-$major.$minor.$patch-000.exe
+

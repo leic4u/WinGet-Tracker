@@ -1,0 +1,19 @@
+﻿id: LeiGod.LeiGodAcc
+current_package:
+  version: "11.3.1.4"
+  architecture:
+    x86:
+      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.1.4.exe
+      hash: 
+checkver:
+  url: https://secapiv11.leigod.com/tools/version/list?size=99
+  method: GET
+  headers:
+    Content-Type: "application/json;charset=UTF-8"
+  jsonpath: "data.list"
+  version_field: "app_version"
+  exclude_pattern: "99"
+autoupdate:
+  architecture:
+    x86:
+      url: https://update.leigod.com/soft/leigod/win/$major.0.0.0/LeiGodSetup.$version.exe

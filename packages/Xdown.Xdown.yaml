@@ -1,0 +1,15 @@
+﻿id: Xdown.Xdown
+current_package:
+  version: "2.0.9.5"
+  architecture:
+    x86:
+      url: https://dl.xdown.org/windows/i386/xdown-2.0.9.5.zip
+      hash: 50B6AF71420890DA1E1C185E3A6C45011E4F512696ECE6523C272607D1E31B16
+checkver:
+  url: https://xdown.org/
+  regex: Latest update version number:(?<version>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)
+autoupdate:
+  architecture:
+    x86:
+      url: https://dl.xdown.org/windows/i386/xdown-$version.zip
+

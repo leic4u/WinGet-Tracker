@@ -1,0 +1,13 @@
+id: xanderfrangos.twinkletray
+current_package:
+  version: "1.17.2"
+  architecture:
+    x64:
+      url: https://github.com/xanderfrangos/twinkle-tray/releases/download/v1.17.2/Twinkle.Tray.v1.17.2.exe
+      hash: 
+checkver:
+  url: https://github.com/xanderfrangos/twinkle-tray/
+autoupdate:
+  architecture:
+    x64:
+      url: https://github.com/xanderfrangos/twinkle-tray/releases/download/v$version/Twinkle.Tray.v$version.exe

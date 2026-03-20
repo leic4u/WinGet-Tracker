@@ -1,0 +1,41 @@
+name: WinGet Tracker
+
+on:
+  schedule:
+    - cron: "2,32 * * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.WINGET_TOKEN }}
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          Install-Module powershell-yaml -Scope CurrentUser -Force
+          winget install RussellBanks.Komac --source winget --accept-source-agreements --accept-package-agreements
+
+      - name: Check versions
+        shell: pwsh
+        run: |
+          ./scripts/check-version.ps1
+
+      - name: Submit updates
+        shell: pwsh
+        run: |
+          ./scripts/submit-winget.ps1
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+
+      - name: Cleanup merged PR branches
+        shell: pwsh
+        run: |
+          ./scripts/cleanup-merged-prs.ps1
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
