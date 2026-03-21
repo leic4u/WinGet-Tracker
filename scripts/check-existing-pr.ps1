@@ -23,7 +23,7 @@ function Test-WingetPRExists {
             --repo microsoft/winget-pkgs `
             --state all `
             --search "$query" `
-            --json number, title, headRefName, author, state, mergedAt `
+            --json number,title,headRefName,author,state,mergedAt `
             2>&1
         
         # 检查是否是有效的 JSON（不是错误信息）

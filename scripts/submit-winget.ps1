@@ -43,6 +43,7 @@ function Update-PackageCurrentInfo {
     $yaml | Set-Content $filePath -Encoding UTF8
 }
 
+$hasFatalError = $false
 $updatesFile = "$PSScriptRoot/../updates.json"
 $logFile = "$PSScriptRoot/../logs/submit-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 
@@ -231,6 +232,7 @@ foreach ($item in $updates) {
             $maxRetries = 3
             $retryCount = 0
             $submitSuccess = $false
+            $packageNotFound = $false
 
             while (-not $submitSuccess -and $retryCount -lt $maxRetries) {
                 try {
@@ -240,8 +242,11 @@ foreach ($item in $updates) {
                         # 备用路径
                         $komacPath = "komac"  # 如果不在预期位置，尝试使用 PATH 中的
                     }
-                    & $komacPath @komacArgs 2>&1
-
+                    
+                    $komacOutput = & $komacPath @komacArgs 2>&1
+                    $outputStr = $komacOutput | Out-String
+                    Write-Host $outputStr
+                    
                     if ($LASTEXITCODE -eq 0) {
                         $submitSuccess = $true
                         Write-Log "  Successfully submitted $id $manifestVersion"
@@ -298,7 +303,13 @@ foreach ($item in $updates) {
                             }
                         }
                     } else {
-                        throw "komac exited with code $LASTEXITCODE"
+                        if ($outputStr -match "does not exist in microsoft/winget-pkgs") {
+                            Write-Log "  Package $id does not exist in winget-pkgs. Skipping PR submission."
+                            $packageNotFound = $true
+                            break
+                        } else {
+                            throw "komac exited with code $LASTEXITCODE"
+                        }
                     }
                 } catch {
                     $retryCount++
@@ -310,13 +321,14 @@ foreach ($item in $updates) {
                     } else {
                         Write-Log "  Error: Failed after $maxRetries attempts"
                         Write-Log "  Last error: $_"
+                        $hasFatalError = $true
                     }
                 }
             }
         }
 
-        # 如果 PR 已存在或提交成功，则更新本地 YAML 配置
-        if (-not $shouldSubmit -or $submitSuccess) {
+        # 只有在不需要提交、提交成功、或者确认包不在仓库时，才更新本地 YAML
+        if (-not $shouldSubmit -or $submitSuccess -or $packageNotFound) {
             Write-Log " Updating current_package in $file"
             try {
                 Update-PackageCurrentInfo -filePath $file -version $manifestVersion -downloads $processedDownloads
@@ -341,7 +353,14 @@ foreach ($item in $updates) {
         }
     } catch {
         Write-Log " Error processing $($item.id): $_"
+        $hasFatalError = $true
     }
 }
 
-Write-Log "Submission process complete"
+if ($hasFatalError) {
+    Write-Log "Submission process completed with fatal errors."
+    exit 1
+} else {
+    Write-Log "Submission process complete."
+    exit 0
+}
