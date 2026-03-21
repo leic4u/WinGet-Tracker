@@ -1,10 +1,10 @@
 id: ChinaMobile.mCloud
 current_package:
-  version: "8.6.0.20260213"
+  version: "8.7.0.20260213"
   architecture:
     x86:
       url: https://yun.mcloud.139.com/mCloudPc/v870/mCloud-8.7.0-000.exe
-      hash: 9B1F3C9E5B2F1A4D8C6E5F7A9B3C2D1E4F5678901234567890ABCDEF12345678
+      hash: 3F868E138C336648AFE78819A42A46850BD2E94DCBFB41A769D376E7E14CF0AD
 checkver:
   url: https://user.yun.139.com/user/version/check
   method: POST
