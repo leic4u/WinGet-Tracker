@@ -110,7 +110,7 @@ Write-Log "Starting version check for $($packages.Count) packages"
 
 $funcCompare = ${function:Compare-Versions}.ToString()
 
-$parallelResults = $packages | ForEach-Object -Parallel -ThrottleLimit 5 {
+$parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     $pkg = $_
     $scriptRoot = $using:PSScriptRoot
     

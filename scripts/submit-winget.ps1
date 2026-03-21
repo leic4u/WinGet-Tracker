@@ -115,7 +115,7 @@ foreach ($item in $updates) {
 
         Write-Log " Starting parallel downloads for $($downloads.Count) architectures..."
         
-        $downloadResults = $downloads | ForEach-Object -Parallel -ThrottleLimit 5 {
+        $downloadResults = $downloads | ForEach-Object -ThrottleLimit 5 -Parallel {
             $d = $_
             $scriptRoot = $using:PSScriptRoot
             . "$scriptRoot/calc-hash.ps1"
