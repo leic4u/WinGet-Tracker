@@ -1,13 +1,15 @@
 id: ClashVergeRev.ClashVergeRev
 current_package:
-  version: "2.4.6"
+  version: "2.4.7"
   architecture:
     x64:
-      url: https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v2.4.6/Clash.Verge_2.4.6_x64-setup.exe
-      hash: F48D047C8CB244D67DDBE216BDA80373CDED71C40B1E55B040D95F0D178EE150
+      url: https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v2.4.7/Clash.Verge_2.4.7_x64-setup.exe
+      hash: 6642881B212BCD4766E81D56AEC7497063BA5198C287F7D00A2ECF13B6F8B61A
 checkver:
   url: "https://github.com/clash-verge-rev/clash-verge-rev"
 autoupdate:
   architecture:
     x64: https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v$version/Clash.Verge_$version_x64-setup.exe
+
+
 
