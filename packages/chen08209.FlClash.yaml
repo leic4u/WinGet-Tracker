@@ -10,14 +10,3 @@ checkver:
 autoupdate:
   architecture:
     x64: https://github.com/chen08209/FlClash/releases/download/v$version/FlClash-$version-windows-amd64-setup.exe
-
-
-
-
-
-
-
-
-
-
-

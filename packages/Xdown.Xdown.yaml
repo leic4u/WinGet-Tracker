@@ -11,4 +11,3 @@ checkver:
 autoupdate:
   architecture:
     x86: https://dl.xdown.org/windows/i386/xdown-$version.zip
-

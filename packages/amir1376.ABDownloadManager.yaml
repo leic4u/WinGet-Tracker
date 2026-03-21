@@ -10,4 +10,3 @@ checkver:
 autoupdate:
   architecture:
     x64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_x64.exe
-

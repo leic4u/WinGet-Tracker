@@ -10,4 +10,3 @@ checkver:
 autoupdate:
   architecture:
     x64: https://github.com/Diorser/LiteMonitor/releases/download/v$version/LiteMonitor_v$version-win-x64.zip
-

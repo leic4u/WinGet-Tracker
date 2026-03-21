@@ -17,4 +17,3 @@ checkver:
 autoupdate:
   architecture:
     x86: https://yun.mcloud.139.com/mCloudPc/v$major$minor$patch/mCloud-$major.$minor.$patch-000.exe
-
