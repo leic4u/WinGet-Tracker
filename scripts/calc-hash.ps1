@@ -3,8 +3,17 @@ function Get-InstallerHash {
         [string]$url
     )
     
-    # 生成唯一的临时文件名（带扩展名）
-    $tmp = Join-Path $env:TEMP "winget-$([guid]::NewGuid()).tmp"
+    # 根据 URL 推断文件扩展名，保留正确的扩展名以便后续版本提取
+    $urlExtension = ""
+    if ($url -match '\.([a-zA-Z0-9]+)(\?.*)?$') {
+        $urlExtension = ".$($matches[1].ToLower())"
+    }
+    if (-not $urlExtension -or $urlExtension -eq ".") {
+        $urlExtension = ".tmp"
+    }
+
+    # 生成唯一的临时文件名（带正确扩展名）
+    $tmp = Join-Path $env:TEMP "winget-$([guid]::NewGuid())$urlExtension"
     
     try {
         # 添加重试机制
@@ -30,12 +39,17 @@ function Get-InstallerHash {
         
         Write-Host "  Calculating SHA256 hash..."
         $hash = Get-FileHash $tmp -Algorithm SHA256
-        return $hash.Hash
-    } finally {
-        # 确保临时文件被清理
+
+        # 返回哈希值和临时文件路径，调用方负责清理临时文件
+        return [PSCustomObject]@{
+            Hash     = $hash.Hash
+            FilePath = $tmp
+        }
+    } catch {
+        # 出错时清理临时文件
         if (Test-Path $tmp) {
             Remove-Item $tmp -Force -ErrorAction SilentlyContinue
-            Write-Host "  Temporary file cleaned up"
         }
+        throw
     }
 }

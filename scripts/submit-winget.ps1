@@ -2,6 +2,7 @@ Import-Module powershell-yaml
 . "$PSScriptRoot/resolve-download.ps1"
 . "$PSScriptRoot/calc-hash.ps1"
 . "$PSScriptRoot/check-existing-pr.ps1"
+. "$PSScriptRoot/get-installer-version.ps1"
 
 # 函数：更新 YAML 文件中的 current_package 信息
 function Update-PackageCurrentInfo {
@@ -122,7 +123,7 @@ foreach ($item in $updates) {
 
         $config = Get-Content $file | ConvertFrom-Yaml
         $id = $config.id
-        $version = $item.version
+        $version = $item.version  # URL 解析出的版本号
 
         Write-Log "Checking PR existence for $id $version"
         $exists = Test-WingetPRExists $id $version
@@ -139,23 +140,68 @@ foreach ($item in $updates) {
             continue
         }
 
+        # 存储下载结果：URL|架构|哈希，以及临时文件路径列表
         $urlParts = @()
+        $tempFiles = @()
+        $detectedVersion = $null
+
         foreach ($d in $downloads) {
             Write-Log " Downloading $($d.url) for hash calculation..."
             try {
-                $hash = Get-InstallerHash $d.url
+                $result = Get-InstallerHash $d.url
                 # 格式：URL|架构|哈希
-                $urlParts += "$($d.url)|$($d.arch)|$($hash)"
-                Write-Log "  Hash: $hash"
+                $urlParts += "$($d.url)|$($d.arch)|$($result.Hash)"
+                $tempFiles += $result.FilePath
+                Write-Log "  Hash: $($result.Hash)"
+
+                # 从下载的安装包中提取内置版本号（取第一个成功提取的）
+                if (-not $detectedVersion) {
+                    Write-Log "  Extracting built-in version from installer..."
+                    $detectedVersion = Get-InstallerVersion $result.FilePath
+                    if ($detectedVersion) {
+                        Write-Log "  Detected installer built-in version: $detectedVersion"
+                    } else {
+                        Write-Log "  Could not detect built-in version from installer"
+                    }
+                }
             } catch {
                 Write-Log "  Error calculating hash: $_"
                 continue
             }
         }
 
+        # 清理所有临时文件
+        foreach ($tmpFile in $tempFiles) {
+            if (Test-Path $tmpFile) {
+                Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
+                Write-Log "  Temporary file cleaned up: $tmpFile"
+            }
+        }
+
         if ($urlParts.Count -eq 0) {
             Write-Log "  Error: No valid downloads after hash calculation"
             continue
+        }
+
+        # 决定 manifest 版本号：优先使用安装包内置版本号
+        $manifestVersion = $version  # 默认使用 URL 版本号
+        $versionReplaced = $false
+        if ($detectedVersion -and $detectedVersion -ne $version) {
+            $manifestVersion = $detectedVersion
+            $versionReplaced = $true
+            Write-Log "  Using installer built-in version: $manifestVersion (URL version: $version)"
+
+            # 使用内置版本号再做一次 PR 存在性检查
+            if ($shouldSubmit) {
+                Write-Log "  Re-checking PR existence with built-in version $manifestVersion"
+                $existsWithBuiltIn = Test-WingetPRExists $id $manifestVersion
+                if ($existsWithBuiltIn) {
+                    Write-Log "  PR already exists for $id $manifestVersion, will update local config only"
+                    $shouldSubmit = $false
+                }
+            }
+        } else {
+            Write-Log "  Using URL version as manifest version: $manifestVersion"
         }
 
         # 构建 downloads 数组（包含 hash）用于更新本地配置
@@ -179,7 +225,7 @@ foreach ($item in $updates) {
             $komacArgs = @(
                 "update",
                 $id,
-                "--version", $version,
+                "--version", $manifestVersion,
                 "--token", $env:WINGET_TOKEN,
                 "--submit",
                 "--created-with", "WinGet Tracker",
@@ -215,14 +261,49 @@ foreach ($item in $updates) {
 
                     if ($LASTEXITCODE -eq 0) {
                         $submitSuccess = $true
-                        Write-Log "  Successfully submitted $id $version"
+                        Write-Log "  Successfully submitted $id $manifestVersion"
+
+                        # 如果版本号被替换，修改 PR 标题以包含 URL 版本号
+                        if ($versionReplaced) {
+                            Write-Log "  Updating PR title to include URL version..."
+                            try {
+                                $env:GH_TOKEN = $env:WINGET_TOKEN
+
+                                # 搜索刚刚创建的 PR
+                                $searchQuery = "$id $manifestVersion"
+                                $prsJson = gh pr list `
+                                    --repo microsoft/winget-pkgs `
+                                    --state open `
+                                    --search "$searchQuery" `
+                                    --author "@me" `
+                                    --json number,title `
+                                    2>&1
+
+                                $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                if ($prs -and $prs.Count -gt 0) {
+                                    $pr = $prs[0]
+                                    $newTitle = "$($pr.title) ($version)"
+                                    gh pr edit $pr.number `
+                                        --repo microsoft/winget-pkgs `
+                                        --title "$newTitle" `
+                                        2>&1
+                                    Write-Log "  PR title updated to: $newTitle"
+                                } else {
+                                    Write-Log "  Warning: Could not find the submitted PR to update title"
+                                }
+                            } catch {
+                                Write-Log "  Warning: Failed to update PR title: $_"
+                            } finally {
+                                $env:GH_TOKEN = $null
+                            }
+                        }
                         
                         # 只有在真正需要提交新 PR 时才创建本地分支
                         # 如果 komac 检测到已存在的 PR，它会成功退出但不会创建新 PR
                         # 在这种情况下，我们不应该创建本地分支
                         if ($shouldSubmit) {
                             # 创建本地 branch for PR tracking
-                            $prBranchName = "${id}-v${version}"
+                            $prBranchName = "${id}-v${manifestVersion}"
                             try {
                                 git checkout -b $prBranchName 2>&1
                                 git push origin $prBranchName 2>&1
@@ -255,7 +336,7 @@ foreach ($item in $updates) {
         if (-not $shouldSubmit -or $submitSuccess) {
             Write-Log " Updating current_package in $file"
             try {
-                Update-PackageCurrentInfo -filePath $file -version $version -downloads $downloadsWithHash
+                Update-PackageCurrentInfo -filePath $file -version $manifestVersion -downloads $downloadsWithHash
                 Write-Log "  Successfully updated current_package"
 
                 # 提交并推送更改到 GitHub 仓库
@@ -265,7 +346,7 @@ foreach ($item in $updates) {
                     git config user.email "github-actions[bot]@users.noreply.github.com"
                     git config user.name "github-actions[bot]"
                     git add $relativePath
-                    git commit -m "Update $id to $version" -m "- Update current_package with version, urls and hashes" 2>&1
+                    git commit -m "Update $id to $manifestVersion" -m "- Update current_package with version, urls and hashes" 2>&1
                     git push 2>&1
                     Write-Log "  Successfully pushed changes to GitHub"
                 } catch {
