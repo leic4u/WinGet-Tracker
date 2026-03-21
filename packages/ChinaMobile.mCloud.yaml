@@ -1,6 +1,6 @@
 id: ChinaMobile.mCloud
 current_package:
-  version: "8.7.0.20260213"
+  version: "8.6.0.20260213"
   architecture:
     x86:
       url: https://yun.mcloud.139.com/mCloudPc/v870/mCloud-8.7.0-000.exe
@@ -12,7 +12,7 @@ checkver:
     Content-Type: "application/json;charset=UTF-8"
   body: '{"channel":"10000000","clientType":7,"version":"0.0.0"}'
   jsonpath: data.version
-  regex: '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)'
+  regex: '^(\d+\.\d+\.\d+)'
   #current_package.version 存储的是 regex 提取后的版本号（如 8.7.0），而不是完整的原始版本号（如 8.7.0.20260213)
 autoupdate:
   architecture:

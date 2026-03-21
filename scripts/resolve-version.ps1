@@ -143,6 +143,45 @@ function Resolve-Version($config) {
                 } else {
                     $version = $current.ToString().TrimStart("v")
                 }
+                
+                # 如果配置了 regex，对原始版本号进行进一步截取
+                if ($config.checkver.regex) {
+                    $regex = $config.checkver.regex
+                    try {
+                        $compiledRegex = [regex]::new($regex)
+                        $match = $compiledRegex.Match($version)
+                        if ($match.Success) {
+                            if ($match.Groups["version"].Success) {
+                                $version = $match.Groups["version"].Value.Trim()
+                            } elseif ($match.Groups.Count -gt 1) {
+                                $version = $match.Groups[1].Value.Trim()
+                            } else {
+                                $version = $match.Value.Trim()
+                            }
+                            Write-Host "  Extracted via regex from jsonpath: $version"
+                        } else {
+                            Write-Warning "  Regex pattern did not match JSON extracted value: $version"
+                            return $null
+                        }
+                    } catch {
+                        Write-Warning "  Invalid regex pattern: $regex - $_"
+                        return $null
+                    }
+                }
+                
+                # 如果配置了 update_version（自定义最终写入配置的格式）
+                if ($config.checkver.update_version) {
+                    $vParts = $version -split '\.'
+                    $rMajor = $vParts[0]
+                    $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { "0" }
+                    $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { "0" }
+                    $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
+                    
+                    $vTemplate = $config.checkver.update_version
+                    $version = $vTemplate.Replace('$major', $rMajor).Replace('$minor', $rMinor).Replace('$patch', $rPatch).Replace('$build', $rBuild)
+                    Write-Host "  Using update_version formatted: $version"
+                }
+
                 return $version
             }
             else {
