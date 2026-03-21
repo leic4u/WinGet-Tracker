@@ -4,7 +4,6 @@ Import-Module powershell-yaml
 . "$PSScriptRoot/check-existing-pr.ps1"
 . "$PSScriptRoot/get-installer-version.ps1"
 
-# 函数：更新 YAML 文件中的 current_package 信息
 function Update-PackageCurrentInfo {
     param(
         [string]$filePath,
@@ -13,66 +12,35 @@ function Update-PackageCurrentInfo {
     )
 
     $yaml = Get-Content $filePath -Raw
-    $yamlLines = $yaml -split "`r?`n"
-    $newLines = @()
-    $i = 0
 
-    while ($i -lt $yamlLines.Count) {
-        $line = $yamlLines[$i]
-        $indent = $line.Length - $line.TrimStart().Length
+    # 清除旧版遗留の current_version 和 top-level architecture
+    $yaml = $yaml -replace '(?m)^current_version:.*\r?\n?', ''
+    $yaml = $yaml -replace '(?m)^architecture:\r?\n(?:^[ \t]+.*\r?\n?)*', ''
 
-        # 跳过旧的 current_package 部分，稍后重新添加
-        if ($line -match '^current_package:') {
-            $currentPackageIndent = $indent
-            $i++
-            # 跳过 current_package 下的所有内容
-            while ($i -lt $yamlLines.Count) {
-                $nextLine = $yamlLines[$i]
-                $nextIndent = $nextLine.Length - $nextLine.TrimStart().Length
-                if ($nextLine.Trim() -ne '' -and $nextIndent -le $currentPackageIndent) {
-                    break
-                }
-                $i++
-            }
-            # 添加新的 current_package 部分
-            $newLines += "current_package:"
-            $newLines += "  version: `"$version`""
-            $newLines += "  architecture:"
-            # 添加下载信息
-            foreach ($d in $downloads) {
-                $archName = $d.arch
-                $newLines += "    ${archName}:"
-                $newLines += "      url: $($d.url)"
-                # 如果 downloads 中有 hash 信息，使用它
-                if ($d.hash) {
-                    $newLines += "      hash: $($d.hash)"
-                } else {
-                    $newLines += '      hash: ""'
-                }
-            }
-            continue
+    # 匹配现有的 current_package 整个缩进块
+    $pattern = '(?m)^current_package:\r?\n(?:^[ \t]+.*\r?\n?)*'
+
+    # 构建并拼接新的 current_package 节点
+    $replacement = "current_package:`n  version: `"$version`"`n  architecture:`n"
+    foreach ($d in $downloads) {
+        $replacement += "    $($d.arch):`n      url: $($d.url)`n"
+        if ($d.hash) {
+            $replacement += "      hash: $($d.hash)`n"
+        } else {
+            $replacement += "      hash: `"`"`n"
         }
-
-        # 跳过旧的 current_version 和 architecture（顶层）
-        if ($line -match '^(current_version|architecture):') {
-            $oldKeyIndent = $indent
-            $i++
-            while ($i -lt $yamlLines.Count) {
-                $nextLine = $yamlLines[$i]
-                $nextIndent = $nextLine.Length - $nextLine.TrimStart().Length
-                if ($nextLine.Trim() -ne '' -and $nextIndent -le $oldKeyIndent) {
-                    break
-                }
-                $i++
-            }
-            continue
-        }
-
-        $newLines += $line
-        $i++
     }
 
-    $newLines -join "`n" | Set-Content $filePath -Encoding UTF8
+    # 如果原文件没有 current_package 节点，则直接追加到末尾
+    if ($yaml -match $pattern) {
+        $yaml = $yaml -replace $pattern, $replacement
+    } else {
+        # 如果不是以换行符结尾，补充一个
+        if (-not $yaml.EndsWith("`n")) { $yaml += "`n" }
+        $yaml += $replacement
+    }
+
+    $yaml | Set-Content $filePath -Encoding UTF8
 }
 
 $updatesFile = "$PSScriptRoot/../updates.json"
@@ -140,33 +108,59 @@ foreach ($item in $updates) {
             continue
         }
 
-        # 存储下载结果：URL|架构|哈希，以及临时文件路径列表
-        $urlParts = @()
+        # 存储下载结果记录，以及临时文件路径列表
+        $processedDownloads = @()
         $tempFiles = @()
         $detectedVersion = $null
 
-        foreach ($d in $downloads) {
-            Write-Log " Downloading $($d.url) for hash calculation..."
+        Write-Log " Starting parallel downloads for $($downloads.Count) architectures..."
+        
+        $downloadResults = $downloads | ForEach-Object -Parallel -ThrottleLimit 5 {
+            $d = $_
+            $scriptRoot = $using:PSScriptRoot
+            . "$scriptRoot/calc-hash.ps1"
+            
             try {
                 $result = Get-InstallerHash $d.url
-                # 格式：URL|架构|哈希
-                $urlParts += "$($d.url)|$($d.arch)|$($result.Hash)"
-                $tempFiles += $result.FilePath
-                Write-Log "  Hash: $($result.Hash)"
+                return [PSCustomObject]@{
+                    Success = $true
+                    url = $d.url
+                    arch = $d.arch
+                    hash = $result.Hash
+                    filePath = $result.FilePath
+                }
+            } catch {
+                return [PSCustomObject]@{
+                    Success = $false
+                    url = $d.url
+                    arch = $d.arch
+                    Error = $_.Exception.Message
+                }
+            }
+        }
+
+        foreach ($res in $downloadResults) {
+            if ($res.Success) {
+                $processedDownloads += [PSCustomObject]@{
+                    url  = $res.url
+                    arch = $res.arch
+                    hash = $res.hash
+                }
+                $tempFiles += $res.filePath
+                Write-Log "  Successfully downloaded $($res.arch): hash $($res.hash)"
 
                 # 从下载的安装包中提取内置版本号（取第一个成功提取的）
                 if (-not $detectedVersion) {
                     Write-Log "  Extracting built-in version from installer..."
-                    $detectedVersion = Get-InstallerVersion $result.FilePath
+                    $detectedVersion = Get-InstallerVersion $res.filePath
                     if ($detectedVersion) {
                         Write-Log "  Detected installer built-in version: $detectedVersion"
                     } else {
                         Write-Log "  Could not detect built-in version from installer"
                     }
                 }
-            } catch {
-                Write-Log "  Error calculating hash: $_"
-                continue
+            } else {
+                Write-Log "  Error calculating hash for $($res.arch): $($res.Error)"
             }
         }
 
@@ -178,7 +172,7 @@ foreach ($item in $updates) {
             }
         }
 
-        if ($urlParts.Count -eq 0) {
+        if ($processedDownloads.Count -eq 0) {
             Write-Log "  Error: No valid downloads after hash calculation"
             continue
         }
@@ -204,17 +198,7 @@ foreach ($item in $updates) {
             Write-Log "  Using URL version as manifest version: $manifestVersion"
         }
 
-        # 构建 downloads 数组（包含 hash）用于更新本地配置
-        $downloadsWithHash = @()
-        for ($j = 0; $j -lt $downloads.Count; $j++) {
-            $d = $downloads[$j]
-            $hash = $urlParts[$j].Split('|')[2]
-            $downloadsWithHash += [PSCustomObject]@{
-                arch = $d.arch
-                url  = $d.url
-                hash = $hash
-            }
-        }
+
 
         # 如果需要提交 PR（PR 不存在）
         if ($shouldSubmit) {
@@ -232,15 +216,14 @@ foreach ($item in $updates) {
                 "--created-with-url", "https://github.com/leic4u/winget-tracker"
             )
             # 添加 --urls 参数和所有 URL
-            if ($urlParts.Count -eq 0) {
+            if ($processedDownloads.Count -eq 0) {
                 Write-Log "  Error: No URLs found for package $id"
                 continue
             }
             $komacArgs += "--urls"
-            foreach ($urlPart in $urlParts) {
-                $url = ($urlPart -split '\|')[0]
-                if (-not [string]::IsNullOrWhiteSpace($url)) {
-                    $komacArgs += $url
+            foreach ($pd in $processedDownloads) {
+                if (-not [string]::IsNullOrWhiteSpace($pd.url)) {
+                    $komacArgs += $pd.url
                 }
             }
 
@@ -336,7 +319,7 @@ foreach ($item in $updates) {
         if (-not $shouldSubmit -or $submitSuccess) {
             Write-Log " Updating current_package in $file"
             try {
-                Update-PackageCurrentInfo -filePath $file -version $manifestVersion -downloads $downloadsWithHash
+                Update-PackageCurrentInfo -filePath $file -version $manifestVersion -downloads $processedDownloads
                 Write-Log "  Successfully updated current_package"
 
                 # 提交并推送更改到 GitHub 仓库

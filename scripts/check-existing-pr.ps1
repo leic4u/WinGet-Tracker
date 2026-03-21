@@ -23,7 +23,7 @@ function Test-WingetPRExists {
             --repo microsoft/winget-pkgs `
             --state all `
             --search "$query" `
-            --json number,title,headRefName,author,state,mergedAt `
+            --json number, title, headRefName, author, state, mergedAt `
             2>&1
         
         # 检查是否是有效的 JSON（不是错误信息）
@@ -61,7 +61,7 @@ function Test-WingetPRExists {
             # 检查是否已合并（通过 state 为 MERGED 或 mergedAt 有值）
             $isMerged = ($pr.state -eq 'MERGED') -or ($null -ne $pr.mergedAt)
             
-            if (($titleMatch -or $branchMatch) -or $isMerged) {
+            if (($titleMatch -or $branchMatch) -and $isMerged) {
                 $status = if ($isMerged) { "merged" } else { "open/closed" }
                 Write-Host "  Found existing PR #$($pr.number): $($pr.title) (status: $status)"
                 return $true
@@ -70,10 +70,12 @@ function Test-WingetPRExists {
         
         Write-Host "  No existing PR found for $id $version"
         return $false
-    } catch {
+    }
+    catch {
         Write-Warning "Failed to check existing PRs: $_"
         return $false
-    } finally {
+    }
+    finally {
         # 清理环境变量
         if ($env:GH_TOKEN) {
             $env:GH_TOKEN = $null

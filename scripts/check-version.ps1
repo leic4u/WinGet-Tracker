@@ -1,4 +1,4 @@
-﻿if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
+if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
     Write-Error "Required module 'powershell-yaml' is not installed. Install it with: Install-Module powershell-yaml -Scope CurrentUser -Force"
     exit 1
 }
@@ -20,181 +20,49 @@ function Compare-Versions {
 
     if ($v1 -eq $v2) { return $false }
 
-    try {
-        $ver1 = [System.Version]::Parse($v1)
-        $ver2 = [System.Version]::Parse($v2)
-        return $ver1 -gt $ver2
-    }
-    catch {
-        $parts1 = $v1.Split('.') | ForEach-Object {
-            $num = 0
-            if ([int]::TryParse($_, [ref]$num)) { $num } else { 0 }
+    $parts1 = [regex]::Matches($v1, '\d+|[A-Za-z]+') | ForEach-Object { $_.Value }
+    $parts2 = [regex]::Matches($v2, '\d+|[A-Za-z]+') | ForEach-Object { $_.Value }
+
+    $maxCount = [Math]::Max($parts1.Count, $parts2.Count)
+    
+    for ($i = 0; $i -lt $maxCount; $i++) {
+        $p1 = if ($i -lt $parts1.Count) { $parts1[$i] } else { "" }
+        $p2 = if ($i -lt $parts2.Count) { $parts2[$i] } else { "" }
+
+        if ($p1 -eq $p2) { continue }
+
+        $isNum1 = [int]::TryParse($p1, [ref]$null)
+        $isNum2 = [int]::TryParse($p2, [ref]$null)
+
+        if ($isNum1 -and $isNum2) {
+            $diff = [int]$p1 - [int]$p2
+            if ($diff -ne 0) { return $diff -gt 0 }
         }
-        $parts2 = $v2.Split('.') | ForEach-Object {
-            $num = 0
-            if ([int]::TryParse($_, [ref]$num)) { $num } else { 0 }
-        }
-
-        $max = [Math]::Max($parts1.Count, $parts2.Count)
-        for ($i = 0; $i -lt $max; $i++) {
-            $p1 = if ($i -lt $parts1.Count) { $parts1[$i] } else { 0 }
-            $p2 = if ($i -lt $parts2.Count) { $parts2[$i] } else { 0 }
-            if ($p1 -gt $p2) { return $true }
-            if ($p1 -lt $p2) { return $false }
-        }
-        return $false
-    }
-}
-
-function Update-YamlConfig {
-    param(
-        [string]$filePath,
-        [string]$newVersion,
-        [object]$config
-    )
-
-    $yaml = Get-Content $filePath -Raw
-    $yamlLines = $yaml -split "`r?`n"
-    $newLines = @()
-    $archsToUpdate = @{}
-    $newArchs = @{}
-
-    if ($config.autoupdate -and $config.autoupdate.architecture) {
-        # 解析版本号各部分，支持 4 段版本号: 3.28.3.134742 -> major=3, minor=28, patch=3, build=134742
-        $versionParts = $newVersion -split '\.'
-        $major = $versionParts[0]
-        $minor = if ($versionParts.Length -gt 1) { $versionParts[1] } else { "0" }
-        $patch = if ($versionParts.Length -gt 2) { $versionParts[2] } else { "0" }
-        $build = if ($versionParts.Length -gt 3) { $versionParts[3] } else { "0" }
-        
-        # 使用模板生成 URL
-        foreach ($archName in $config.autoupdate.architecture.Keys) {
-            $archValue = $config.autoupdate.architecture[$archName]
-            
-            # 处理两种可能的配置格式：
-            # 1. 直接字符串: x86: "https://..."
-            # 2. 对象格式: x86: { url: "https://..." }
-            if ($archValue -is [string]) {
-                $template = $archValue
+        elseif ($isNum1 -and -not $isNum2) {
+            if ($p2 -eq "") {
+                if ([int]$p1 -eq 0) { continue }
+                return [int]$p1 -gt 0
             }
-            elseif ($archValue -and $archValue.url) {
-                $template = $archValue.url
-            }
-            else {
-                Write-Host "  Warning: Invalid architecture configuration for $archName"
-                continue
-            }
-            
-            # 确保所有变量都不为 null
-            if (-not $template) { Write-Host "  Warning: Template is null for $archName"; continue }
-            if (-not $newVersion) { Write-Host "  Warning: newVersion is null for $archName"; continue }
-            if (-not $major) { Write-Host "  Warning: major is null for $archName"; continue }
-            if (-not $minor) { Write-Host "  Warning: minor is null for $archName"; continue }
-            if (-not $patch) { Write-Host "  Warning: patch is null for $archName"; continue }
-            if (-not $build) { Write-Host "  Warning: build is null for $archName"; continue }
-            
-            $newUrl = $template.Replace('$version', $newVersion)
-            $newUrl = $newUrl.Replace('$major', $major)
-            $newUrl = $newUrl.Replace('$minor', $minor)
-            $newUrl = $newUrl.Replace('$patch', $patch)
-            $newUrl = $newUrl.Replace('$build', $build)
-            if (-not [string]::IsNullOrWhiteSpace($newUrl)) {
-                # 只存储 URL，哈希值在 submit-winget 阶段计算
-                $archsToUpdate[$archName] = @{
-                    url = $newUrl
-                    hash = ""  # 空哈希，稍后在 submit-winget 中填充
-                }
-            }
+            return $true 
         }
-    }
-
-    # 检查是否有新架构需要添加
-    $existingArchs = @()
-    if ($config.current_package -and $config.current_package.architecture) {
-        # 安全地获取现有架构名称
-        if ($config.current_package.architecture -is [hashtable] -or $config.current_package.architecture -is [System.Collections.Specialized.OrderedDictionary]) {
-            $existingArchs = $config.current_package.architecture.Keys
-        }
-        elseif ($config.current_package.architecture.PSObject.Properties) {
-            $existingArchs = $config.current_package.architecture.PSObject.Properties.Name
+        elseif (-not $isNum1 -and $isNum2) {
+            if ($p1 -eq "") {
+                if ([int]$p2 -eq 0) { continue }
+                return $false
+            }
+            return $false
         }
         else {
-            $existingArchs = @()
+            if ($p1 -eq "") { return $true }
+            if ($p2 -eq "") { return $false }
+            $diff = [string]::Compare($p1, $p2, $true)
+            if ($diff -ne 0) { return $diff -gt 0 }
         }
     }
-    foreach ($archName in $archsToUpdate.Keys) {
-        if ($existingArchs -notcontains $archName) {
-            $newArchs[$archName] = $archsToUpdate[$archName]
-            Write-Host "  New architecture detected: $archName"
-        }
-    }
-
-    # 重新构建 YAML 内容
-    $i = 0
-    $currentPackageIndent = 0
-    while ($i -lt $yamlLines.Count) {
-        $line = $yamlLines[$i]
-        $indent = $line.Length - $line.TrimStart().Length
-
-        # 跳过旧的 current_package 部分，稍后重新添加
-        if ($line -match '^current_package:') {
-            $currentPackageIndent = $indent
-            $i++
-            # 跳过 current_package 下的所有内容
-            while ($i -lt $yamlLines.Count) {
-                $nextLine = $yamlLines[$i]
-                $nextIndent = $nextLine.Length - $nextLine.TrimStart().Length
-                # 如果遇到相同或更少缩进的行，说明 current_package 结束
-                if ($nextLine.Trim() -ne '' -and $nextIndent -le $currentPackageIndent) {
-                    break
-                }
-                $i++
-            }
-            # 添加新的 current_package 部分
-            $newLines += "current_package:"
-            $newLines += "  version: `"$newVersion`""
-            $newLines += "  architecture:"
-            # 合并所有架构（已有的 + 新增的），避免重复
-            $allArchs = @{}
-            foreach ($archName in $archsToUpdate.Keys) {
-                $allArchs[$archName] = $archsToUpdate[$archName]
-            }
-            foreach ($archName in $newArchs.Keys) {
-                if (-not $allArchs.ContainsKey($archName)) {
-                    $allArchs[$archName] = $newArchs[$archName]
-                }
-            }
-            # 添加所有架构
-            foreach ($archName in ($allArchs.Keys | Sort-Object)) {
-                $archInfo = $allArchs[$archName]
-                $newLines += "    ${archName}:"
-                $newLines += "      url: $($archInfo['url'])"
-                $newLines += "      hash: $($archInfo['hash'])"
-            }
-            continue
-        }
-
-        # 跳过旧的 current_version 和 architecture（顶层）
-        if ($line -match '^(current_version|architecture):') {
-            # 跳过这一行及其子内容
-            $oldKeyIndent = $indent
-            $i++
-            while ($i -lt $yamlLines.Count) {
-                $nextLine = $yamlLines[$i]
-                $nextIndent = $nextLine.Length - $nextLine.TrimStart().Length
-                if ($nextLine.Trim() -ne '' -and $nextIndent -le $oldKeyIndent) {
-                    break
-                }
-                $i++
-            }
-            continue
-        }
-
-        $newLines += $line
-        $i++
-    }
-    $newLines -join "`n" | Set-Content $filePath -Encoding UTF8
+    
+    return $false
 }
+
 
 $packages = Get-ChildItem "$PSScriptRoot/../packages/*.yaml"
 $result = @()
@@ -240,56 +108,89 @@ function Write-Log {
 
 Write-Log "Starting version check for $($packages.Count) packages"
 
-foreach ($pkg in $packages) {
+$funcCompare = ${function:Compare-Versions}.ToString()
+
+$parallelResults = $packages | ForEach-Object -Parallel -ThrottleLimit 5 {
+    $pkg = $_
+    $scriptRoot = $using:PSScriptRoot
+    
+    Set-Item -Path "Function:\Compare-Versions" -Value ([scriptblock]::Create($using:funcCompare))
+
+    Import-Module powershell-yaml -ErrorAction SilentlyContinue
+    . "$scriptRoot/resolve-version.ps1"
+    . "$scriptRoot/scan-url-version.ps1"
+
+    $logs = @()
+    function Write-ThreadLog($message, $level = 'INFO') {
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $script:logs += "[$timestamp] [$level] $message"
+    }
+
+    $update = $null
+    $threadHasError = $false
+
     try {
         $config = Get-Content $pkg | ConvertFrom-Yaml
         $id = $config.id
 
-        Write-Log "Checking $id" -level "INFO"
+        Write-ThreadLog "Checking $id" -level "INFO"
 
         $currentVersion = if ($config.current_package -and $config.current_package.version) { $config.current_package.version } elseif ($config.current_version) { $config.current_version } else { "0.0.0" }
-        Write-Log " Current version (from config): $currentVersion" -level "INFO"
+        Write-ThreadLog " Current version (from config): $currentVersion" -level "INFO"
 
         $version = Resolve-Version $config
 
         if (-not $version) {
             try {
-                Write-Log " Primary version check failed, trying fallback..." -level "WARNING"
+                Write-ThreadLog " Primary version check failed, trying fallback..." -level "WARNING"
                 $html = Invoke-WebRequest $config.checkver.url -UseBasicParsing -ErrorAction Stop
                 $version = Get-VersionFromUrl $html.Content
             }
             catch {
-                Write-Log " Warning: Failed to scan URL for version: $_" -level "WARNING"
+                Write-ThreadLog " Warning: Failed to scan URL for version: $_" -level "WARNING"
             }
         }
 
         if (-not $version) {
-            Write-Log " Skipped: Could not determine version" -level "ERROR"
-            continue
-        }
+            Write-ThreadLog " Skipped: Could not determine version" -level "ERROR"
+        } else {
+            Write-ThreadLog " Remote version: $version" -level "INFO"
+            Write-ThreadLog " Comparing versions: current='$currentVersion' vs remote='$version'" -level "INFO"
 
-        Write-Log " Remote version: $version" -level "INFO"
-        Write-Log " Comparing versions: current='$currentVersion' vs remote='$version'" -level "INFO"
-
-        if (Compare-Versions -v1 $version -v2 $currentVersion) {
-            $result += [PSCustomObject]@{
-                id      = $id
-                version = $version
-                file    = $pkg.Name
+            if (Compare-Versions -v1 $version -v2 $currentVersion) {
+                $update = [PSCustomObject]@{
+                    id      = $id
+                    version = $version
+                    file    = $pkg.Name
+                }
+                Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
             }
-            Write-Log " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
-
-            # 更新 YAML 配置文件
-            Update-YamlConfig -filePath $pkg.FullName -newVersion $version -config $config
-            Write-Log " Updated config file with new version, urls and hashes" -level "INFO"
-        }
-        else {
-            Write-Log " Up to date" -level "INFO"
+            else {
+                Write-ThreadLog " Up to date" -level "INFO"
+            }
         }
     }
     catch {
-        $hasError = $true
-        Write-Log " Error processing $($pkg.Name): $_" -level "ERROR"
+        $threadHasError = $true
+        Write-ThreadLog " Error processing $($pkg.Name): $_" -level "ERROR"
+    }
+
+    return [PSCustomObject]@{
+        Logs = $logs
+        Update = $update
+        HasError = $threadHasError
+    }
+}
+
+foreach ($res in $parallelResults) {
+    if ($res.HasError) { $hasError = $true }
+    if ($null -ne $res.Update) { $result += $res.Update }
+    
+    foreach ($log in $res.Logs) {
+        if ($log -match '\[INFO\]') { Write-Host $log -ForegroundColor Green }
+        elseif ($log -match '\[WARNING\]') { Write-Host $log -ForegroundColor Yellow }
+        elseif ($log -match '\[ERROR\]') { Write-Host $log -ForegroundColor Red }
+        Add-Content -Path $logFile -Value $log
     }
 }
 
