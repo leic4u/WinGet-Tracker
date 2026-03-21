@@ -153,7 +153,8 @@ $parallelResults = $packages | ForEach-Object -Parallel -ThrottleLimit 5 {
 
         if (-not $version) {
             Write-ThreadLog " Skipped: Could not determine version" -level "ERROR"
-        } else {
+        }
+        else {
             Write-ThreadLog " Remote version: $version" -level "INFO"
             Write-ThreadLog " Comparing versions: current='$currentVersion' vs remote='$version'" -level "INFO"
 
@@ -176,8 +177,8 @@ $parallelResults = $packages | ForEach-Object -Parallel -ThrottleLimit 5 {
     }
 
     return [PSCustomObject]@{
-        Logs = $logs
-        Update = $update
+        Logs     = $logs
+        Update   = $update
         HasError = $threadHasError
     }
 }
@@ -202,7 +203,8 @@ if ($result.Count -gt 0) {
     Write-Log "Results saved to $outputPath" -level "INFO"
     $result | Format-Table -AutoSize
     Write-Log "Updates found, exiting with code 0 for further processing" -level "INFO"
-} else {
+}
+else {
     Write-Log "No updates found, exiting normally" -level "INFO"
 }
 
