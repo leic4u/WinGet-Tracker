@@ -93,7 +93,8 @@ foreach ($item in $updates) {
 
         $config = Get-Content $file | ConvertFrom-Yaml
         $id = $config.id
-        $version = $item.version  # URL 解析出的版本号
+        $version = $item.version  # URL 解析出的格式化版本号
+        $urlVersion = if ($item.PSObject.Properties['url_version']) { $item.url_version } else { $version }
         $checkverData = if ($item.PSObject.Properties['data']) { $item.data } else { $null }
 
         Write-Log "Checking PR existence for $id $version"
@@ -105,7 +106,7 @@ foreach ($item in $updates) {
             Write-Log " Processing $id -> $version"
         }
 
-        $downloads = Resolve-Download $config $version $checkverData
+        $downloads = Resolve-Download $config $version $urlVersion $checkverData
         if (-not $downloads -or $downloads.Count -eq 0) {
             Write-Log "  Warning: No download URLs found"
             continue
@@ -185,17 +186,54 @@ foreach ($item in $updates) {
         $versionReplaced = $false
         if ($detectedVersion -and $detectedVersion -ne $version) {
             $manifestVersion = $detectedVersion
-            $versionReplaced = $true
-            Write-Log "  Using installer built-in version: $manifestVersion (URL version: $version)"
+            
+            # 如果配置了 update_version，则对安装包内置版本号进行格式化
+            if ($config.checkver.update_version) {
+                # 内置版本号部分
+                $vParts = $detectedVersion -split '\.'
+                $rMajor = $vParts[0]
+                $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { "0" }
+                $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { "0" }
+                $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
+                
+                # URL未格式化版本号部分 (urlVersion)
+                $uParts = $urlVersion -split '\.'
+                $uMajor = $uParts[0]
+                $uMinor = if ($uParts.Count -gt 1) { $uParts[1] } else { "0" }
+                $uPatch = if ($uParts.Count -gt 2) { $uParts[2] } else { "0" }
+                $uBuild = if ($uParts.Count -gt 3) { $uParts[3] } else { "0" }
+                
+                $vTemplate = $config.checkver.update_version
+                
+                # 显式 URL 变量
+                $manifestVersion = $vTemplate.Replace('$url_version', $urlVersion)
+                $manifestVersion = $manifestVersion.Replace('$url_major', $uMajor).Replace('$url_minor', $uMinor).Replace('$url_patch', $uPatch).Replace('$url_build', $uBuild)
+                
+                # 显式 PKG 变量
+                $manifestVersion = $manifestVersion.Replace('$pkg_version', $detectedVersion)
+                $manifestVersion = $manifestVersion.Replace('$pkg_major', $rMajor).Replace('$pkg_minor', $rMinor).Replace('$pkg_patch', $rPatch).Replace('$pkg_build', $rBuild)
+                
+                # 兼容原有相对上下文变量 (在此处上下文是 Installer 版本号)
+                $manifestVersion = $manifestVersion.Replace('$major', $rMajor).Replace('$minor', $rMinor).Replace('$patch', $rPatch).Replace('$build', $rBuild)
+                
+                Write-Log "  Formatted built-in version using update_version: $manifestVersion"
+            }
 
-            # 使用内置版本号再做一次 PR 存在性检查
-            if ($shouldSubmit) {
-                Write-Log "  Re-checking PR existence with built-in version $manifestVersion"
-                $existsWithBuiltIn = Test-WingetPRExists $id $manifestVersion
-                if ($existsWithBuiltIn) {
-                    Write-Log "  PR already exists for $id $manifestVersion, will update local config only"
-                    $shouldSubmit = $false
+            if ($manifestVersion -ne $version) {
+                $versionReplaced = $true
+                Write-Log "  Using installer built-in version: $manifestVersion (URL version: $version)"
+
+                # 使用内置版本号再做一次 PR 存在性检查
+                if ($shouldSubmit) {
+                    Write-Log "  Re-checking PR existence with built-in version $manifestVersion"
+                    $existsWithBuiltIn = Test-WingetPRExists $id $manifestVersion
+                    if ($existsWithBuiltIn) {
+                        Write-Log "  PR already exists for $id $manifestVersion, will update local config only"
+                        $shouldSubmit = $false
+                    }
                 }
+            } else {
+                Write-Log "  Installer built-in version formatted to match URL version: $manifestVersion"
             }
         } else {
             Write-Log "  Using URL version as manifest version: $manifestVersion"

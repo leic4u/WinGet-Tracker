@@ -169,6 +169,8 @@ function Resolve-Version($config) {
                     }
                 }
                 
+                $urlVersion = $version
+                
                 # 如果配置了 update_version（自定义最终写入配置的格式）
                 if ($config.checkver.update_version) {
                     $vParts = $version -split '\.'
@@ -178,12 +180,24 @@ function Resolve-Version($config) {
                     $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
                     
                     $vTemplate = $config.checkver.update_version
-                    $version = $vTemplate.Replace('$major', $rMajor).Replace('$minor', $rMinor).Replace('$patch', $rPatch).Replace('$build', $rBuild)
+                    
+                    # URL 明确变量命名空间
+                    $version = $vTemplate.Replace('$url_version', $urlVersion)
+                    $version = $version.Replace('$url_major', $rMajor).Replace('$url_minor', $rMinor).Replace('$url_patch', $rPatch).Replace('$url_build', $rBuild)
+                    
+                    # PKG 明确变量暂用 URL 的值替代（以供初检比对）
+                    $version = $version.Replace('$pkg_version', $urlVersion)
+                    $version = $version.Replace('$pkg_major', $rMajor).Replace('$pkg_minor', $rMinor).Replace('$pkg_patch', $rPatch).Replace('$pkg_build', $rBuild)
+                    
+                    # 兼容原版的相对上下文变量
+                    $version = $version.Replace('$major', $rMajor).Replace('$minor', $rMinor).Replace('$patch', $rPatch).Replace('$build', $rBuild)
+                    
                     Write-Host "  Using update_version formatted: $version"
                 }
 
                 return [PSCustomObject]@{
                     Version = $version
+                    UrlVersion = $urlVersion
                     Data = $response
                 }
             }
@@ -242,11 +256,19 @@ function Resolve-Version($config) {
                     $build = if ($versionParts.Length -gt 3) { $versionParts[3] } else { "0" }
                     
                     # 对 update_version 进行变量替换
-                    $version = $config.checkver.update_version
-                    $version = $version.Replace('$major', $major)
-                    $version = $version.Replace('$minor', $minor)
-                    $version = $version.Replace('$patch', $patch)
-                    $version = $version.Replace('$build', $build)
+                    $vTemplate = $config.checkver.update_version
+                    
+                    # URL 明确变量命名空间
+                    $version = $vTemplate.Replace('$url_version', $urlVersion)
+                    $version = $version.Replace('$url_major', $major).Replace('$url_minor', $minor).Replace('$url_patch', $patch).Replace('$url_build', $build)
+                    
+                    # PKG 明确变量暂用 URL 的值替代（以供初检比对）
+                    $version = $version.Replace('$pkg_version', $urlVersion)
+                    $version = $version.Replace('$pkg_major', $major).Replace('$pkg_minor', $minor).Replace('$pkg_patch', $patch).Replace('$pkg_build', $build)
+                    
+                    # 兼容原版的相对上下文变量
+                    $version = $version.Replace('$major', $major).Replace('$minor', $minor).Replace('$patch', $patch).Replace('$build', $build)
+                    
                     Write-Host " Using update_version from config: $version"
                 } else {
                     $version = $extractedVersion
@@ -254,10 +276,16 @@ function Resolve-Version($config) {
 
                 # 验证版本号格式
                 if ($version -and $version -match '^\d+(\.\d+)*(-[a-zA-Z0-9]+)?') {
-                    return $version
+                    return [PSCustomObject]@{
+                        Version = $version
+                        UrlVersion = $extractedVersion
+                    }
                 } elseif ($version) {
                     Write-Warning "  Version format looks unusual: $version"
-                    return $version
+                    return [PSCustomObject]@{
+                        Version = $version
+                        UrlVersion = $extractedVersion
+                    }
                 }
             } else {
                 Write-Warning " Regex pattern did not match any content"

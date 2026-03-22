@@ -141,9 +141,11 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
         $versionResult = Resolve-Version $config
         if ($versionResult -is [System.Management.Automation.PSCustomObject] -and $null -ne $versionResult.Version) {
             $version = $versionResult.Version
+            $urlVersion = if ($versionResult.PSObject.Properties['UrlVersion']) { $versionResult.UrlVersion } else { $version }
             $checkverData = $versionResult.Data
         } else {
             $version = $versionResult
+            $urlVersion = $version
             $checkverData = $null
         }
 
@@ -167,10 +169,11 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
 
             if (Compare-Versions -v1 $version -v2 $currentVersion) {
                 $update = [PSCustomObject]@{
-                    id      = $id
-                    version = $version
-                    file    = $pkg.Name
-                    data    = $checkverData
+                    id          = $id
+                    version     = $version
+                    url_version = $urlVersion
+                    file        = $pkg.Name
+                    data        = $checkverData
                 }
                 Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
             }

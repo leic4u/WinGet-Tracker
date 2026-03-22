@@ -1,12 +1,15 @@
-function Resolve-Download($config, $version, $checkverData = $null) {
+function Resolve-Download($config, $version, $urlVersion = $null, $checkverData = $null) {
+
+    if (-not $urlVersion) { $urlVersion = $version }
 
     if (-not $config.autoupdate) {
         Write-Warning "No autoupdate config found for $($config.id)"
         return @()
     }
 
-    # 解析版本号各部分，支持 4 段版本号: 3.28.3.134742 -> major=3, minor=28, patch=3, build=134742
-    $versionParts = $version -split '\.'
+    # 解析未格式化的原始版本号各部分，支持 4 段版本号: 3.28.3.134742 -> major=3, minor=28, patch=3, build=134742
+    # 这样可以确保即使 update_version 裁剪了尾部，autoupdate 替换的变量仍然完整含有 build 等信息。
+    $versionParts = $urlVersion -split '\.'
     $major = $versionParts[0]
     $minor = if ($versionParts.Length -gt 1) { $versionParts[1] } else { "0" }
     $patch = if ($versionParts.Length -gt 2) { $versionParts[2] } else { "0" }
@@ -48,7 +51,14 @@ function Resolve-Download($config, $version, $checkverData = $null) {
         if (-not $templateUrl) {
             continue
         }
-        $downloadUrl = $templateUrl.Replace('$version', $version)
+        $downloadUrl = $templateUrl.Replace('$url_version', $urlVersion)
+        $downloadUrl = $downloadUrl.Replace('$url_major', $major)
+        $downloadUrl = $downloadUrl.Replace('$url_minor', $minor)
+        $downloadUrl = $downloadUrl.Replace('$url_patch', $patch)
+        $downloadUrl = $downloadUrl.Replace('$url_build', $build)
+
+        # 保持原版的相对上下文变量
+        $downloadUrl = $downloadUrl.Replace('$version', $version)
         $downloadUrl = $downloadUrl.Replace('$major', $major)
         $downloadUrl = $downloadUrl.Replace('$minor', $minor)
         $downloadUrl = $downloadUrl.Replace('$patch', $patch)
