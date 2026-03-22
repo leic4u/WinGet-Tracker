@@ -182,7 +182,10 @@ function Resolve-Version($config) {
                     Write-Host "  Using update_version formatted: $version"
                 }
 
-                return $version
+                return [PSCustomObject]@{
+                    Version = $version
+                    Data = $response
+                }
             }
             else {
                 Write-Warning "  Could not extract version using jsonpath: $jsonPath"

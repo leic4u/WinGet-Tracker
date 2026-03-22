@@ -138,7 +138,14 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
         $currentVersion = if ($config.current_package -and $config.current_package.version) { $config.current_package.version } elseif ($config.current_version) { $config.current_version } else { "0.0.0" }
         Write-ThreadLog " Current version (from config): $currentVersion" -level "INFO"
 
-        $version = Resolve-Version $config
+        $versionResult = Resolve-Version $config
+        if ($versionResult -is [System.Management.Automation.PSCustomObject] -and $null -ne $versionResult.Version) {
+            $version = $versionResult.Version
+            $checkverData = $versionResult.Data
+        } else {
+            $version = $versionResult
+            $checkverData = $null
+        }
 
         if (-not $version) {
             try {
@@ -163,6 +170,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                     id      = $id
                     version = $version
                     file    = $pkg.Name
+                    data    = $checkverData
                 }
                 Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
             }
@@ -199,7 +207,7 @@ Write-Log "Check complete. Found $($result.Count) updates."
 
 if ($result.Count -gt 0) {
     $outputPath = "$PSScriptRoot/../updates.json"
-    $result | ConvertTo-Json | Out-File $outputPath -Encoding UTF8
+    $result | ConvertTo-Json -Depth 10 | Out-File $outputPath -Encoding UTF8
     Write-Log "Results saved to $outputPath" -level "INFO"
     $result | Format-Table -AutoSize
     Write-Log "Updates found, exiting with code 0 for further processing" -level "INFO"

@@ -93,6 +93,7 @@ foreach ($item in $updates) {
         $config = Get-Content $file | ConvertFrom-Yaml
         $id = $config.id
         $version = $item.version  # URL 解析出的版本号
+        $checkverData = if ($item.PSObject.Properties['data']) { $item.data } else { $null }
 
         Write-Log "Checking PR existence for $id $version"
         $exists = Test-WingetPRExists $id $version
@@ -103,7 +104,7 @@ foreach ($item in $updates) {
             Write-Log " Processing $id -> $version"
         }
 
-        $downloads = Resolve-Download $config $version
+        $downloads = Resolve-Download $config $version $checkverData
         if (-not $downloads -or $downloads.Count -eq 0) {
             Write-Log "  Warning: No download URLs found"
             continue

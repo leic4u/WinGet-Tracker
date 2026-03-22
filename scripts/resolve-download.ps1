@@ -1,4 +1,4 @@
-function Resolve-Download($config, $version) {
+function Resolve-Download($config, $version, $checkverData = $null) {
 
     if (-not $config.autoupdate) {
         Write-Warning "No autoupdate config found for $($config.id)"
@@ -15,7 +15,39 @@ function Resolve-Download($config, $version) {
     $urls = @()
     foreach ($arch in $config.autoupdate.architecture.Keys) {
         $template = $config.autoupdate.architecture[$arch]
-        $templateUrl = if ($template -is [string]) { $template } else { $template.url }
+        $templateUrl = $null
+        if ($template -is [System.Collections.IDictionary] -and $template.jsonpath) {
+            $jsonPath = $template.jsonpath
+            if ($checkverData) {
+                $parts = $jsonPath -split "\."
+                $current = $checkverData
+                foreach ($part in $parts) {
+                    if ($current -is [System.Collections.IDictionary]) {
+                        $current = $current[$part]
+                    }
+                    elseif ($current.PSObject.Properties[$part]) {
+                        $current = $current.$part
+                    }
+                    else {
+                        $current = $null
+                        break
+                    }
+                }
+                if ($current) {
+                    $templateUrl = $current.ToString()
+                }
+                else {
+                    Write-Warning "Could not extract download URL using jsonpath: $jsonPath from checkver data"
+                }
+            } else {
+                Write-Warning "jsonpath specified for architecture $arch but no checkver data available"
+            }
+        } else {
+            $templateUrl = if ($template -is [string]) { $template } else { $template.url }
+        }
+        if (-not $templateUrl) {
+            continue
+        }
         $downloadUrl = $templateUrl.Replace('$version', $version)
         $downloadUrl = $downloadUrl.Replace('$major', $major)
         $downloadUrl = $downloadUrl.Replace('$minor', $minor)
