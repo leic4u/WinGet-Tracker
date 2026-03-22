@@ -1,6 +1,6 @@
 id: chen08209.FlClash
 current_package:
-  version: "0.8.91+2026020201"
+  version: "0.8.92+2026020201"
   architecture:
     x64:
       url: https://github.com/chen08209/FlClash/releases/download/v0.8.92/FlClash-0.8.92-windows-amd64-setup.exe
