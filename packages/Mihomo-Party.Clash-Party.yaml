@@ -1,0 +1,20 @@
+id: Mihomo-Party.Clash-Party
+current_package:
+  version: "0.0.0"
+  architecture:
+    x64:
+      url: 
+      hash: 
+    x86:
+      url: 
+      hash:
+    arm64:
+      url: 
+      hash:
+checkver:
+  url: "https://github.com/mihomo-party-org/clash-party"
+autoupdate:
+  architecture:
+    x64: https://github.com/mihomo-party-org/clash-party/releases/download/v$version/clash-party-windows-$version-x64-setup.exe
+    x86: https://github.com/mihomo-party-org/clash-party/releases/download/v$version/clash-party-windows-$version-ia32-setup.exe
+    arm64: https://github.com/mihomo-party-org/clash-party/releases/download/v$version/clash-party-windows-$version-arm64-setup.exe

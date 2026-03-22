@@ -1,12 +1,14 @@
 id: amir1376.ABDownloadManager
 current_package:
-  version: "1.8.7.0"
+  version: "1.8.6.0"
   architecture:
     x64:
-      url: https://github.com/amir1376/ab-download-manager/releases/download/v1.8.7/ABDownloadManager_1.8.7_windows_x64.exe
-      hash: 1FE83B17DA1C8AB78D20CC59161001A8E043FEF1AD7DE2C3946A3A12C61D7151
+      url: https://github.com/amir1376/ab-download-manager/releases/download/v1.8.6/ABDownloadManager_1.8.6_windows_x64.exe
+      hash: 
 checkver:
   url: "https://github.com/amir1376/ab-download-manager"
+  update_version: $major.$minor.$patch
 autoupdate:
   architecture:
     x64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_x64.exe
+    arm64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_arm64.exe
