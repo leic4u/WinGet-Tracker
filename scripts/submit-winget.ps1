@@ -40,6 +40,7 @@ function Update-PackageCurrentInfo {
         $yaml += $replacement
     }
 
+    $yaml = $yaml.TrimEnd()
     $yaml | Set-Content $filePath -Encoding UTF8
 }
 
