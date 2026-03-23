@@ -1,9 +1,9 @@
 id: Readdle.Spark
 current_package:
-  version: "3.28.2"
+  version: "3.28.3"
   architecture:
     x64:
-      url: https://downloads.sparkmailapp.com/Spark3/win/dist/3.28.2.134742/Spark.exe
+      url: https://downloads.sparkmailapp.com/Spark3/win/dist/3.28.3.134742/Spark.exe
       hash: C34E7EA19137C1225DF754D7B1452A0695B600B2631314A66989DB545C2E7579
 checkver:
   url: https://downloads.sparkmailapp.com/Spark3/win/dist/appcast.xml
