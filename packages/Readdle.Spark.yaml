@@ -8,7 +8,7 @@ current_package:
 checkver:
   url: https://downloads.sparkmailapp.com/Spark3/win/dist/appcast.xml
   regex: Version (\d+\.\d+\.\d+\.\d+)
-  update_version: $pkgVersion
 autoupdate:
+  version_format: $pkgMajor.$pkgMinor.$pkgPatch
   architecture:
-    x64: https://downloads.sparkmailapp.com/Spark3/win/dist/$urlVersion/Spark.exe
+    x64: https://downloads.sparkmailapp.com/Spark3/win/dist/$version/Spark.exe

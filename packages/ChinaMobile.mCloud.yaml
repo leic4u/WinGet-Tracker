@@ -13,5 +13,6 @@ checkver:
   body: '{"channel":"10000000","clientType":7,"version":"0.0.0"}'
   jsonpath: data.version
 autoupdate:
+  version_format: $pkgVersion
   architecture:
     x86: https://yun.mcloud.139.com/mCloudPc/v$major$minor$patch/mCloud-$major.$minor.$patch-000.exe

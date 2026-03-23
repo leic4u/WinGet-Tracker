@@ -181,62 +181,63 @@ foreach ($item in $updates) {
             continue
         }
 
-        # 决定 manifest 版本号：优先使用安装包内置版本号
+        # 决定 manifest 版本号
         $manifestVersion = $version  # 默认使用 URL 版本号
         $versionReplaced = $false
-        if ($detectedVersion -and $detectedVersion -ne $version) {
-            $manifestVersion = $detectedVersion
+
+        # 如果配置了 version_format，则应用格式化（无论是否检测到内置版本号）
+        if ($config.autoupdate.version_format) {
+            # PKG 变量部分 - 优先使用检测到的版本号，如果没有则回退到 URL 版本号
+            $pkgBaseVersion = if ($detectedVersion) { $detectedVersion } else { $urlVersion }
+            $vParts = $pkgBaseVersion -split '\.'
+            $rMajor = $vParts[0]
+            $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { "0" }
+            $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { "0" }
+            $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
             
-            # 如果配置了 update_version，则对安装包内置版本号进行格式化
-            if ($config.checkver.update_version) {
-                # 内置版本号部分
-                $vParts = $detectedVersion -split '\.'
-                $rMajor = $vParts[0]
-                $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { "0" }
-                $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { "0" }
-                $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
-                
-                # URL未格式化版本号部分 (urlVersion)
-                $uParts = $urlVersion -split '\.'
-                $uMajor = $uParts[0]
-                $uMinor = if ($uParts.Count -gt 1) { $uParts[1] } else { "0" }
-                $uPatch = if ($uParts.Count -gt 2) { $uParts[2] } else { "0" }
-                $uBuild = if ($uParts.Count -gt 3) { $uParts[3] } else { "0" }
-                
-                $vTemplate = $config.checkver.update_version
-                
-                # 显式 URL 变量
-                $manifestVersion = $vTemplate.Replace('$url_version', $urlVersion)
-                $manifestVersion = $manifestVersion.Replace('$url_major', $uMajor).Replace('$url_minor', $uMinor).Replace('$url_patch', $uPatch).Replace('$url_build', $uBuild)
-                
-                # 显式 PKG 变量
-                $manifestVersion = $manifestVersion.Replace('$pkg_version', $detectedVersion)
-                $manifestVersion = $manifestVersion.Replace('$pkg_major', $rMajor).Replace('$pkg_minor', $rMinor).Replace('$pkg_patch', $rPatch).Replace('$pkg_build', $rBuild)
-                
-                # 兼容原有相对上下文变量 (在此处上下文是 Installer 版本号)
-                $manifestVersion = $manifestVersion.Replace('$major', $rMajor).Replace('$minor', $rMinor).Replace('$patch', $rPatch).Replace('$build', $rBuild)
-                
-                Write-Log "  Formatted built-in version using update_version: $manifestVersion"
-            }
+            # URL 变量部分
+            $uParts = $urlVersion -split '\.'
+            $uMajor = $uParts[0]
+            $uMinor = if ($uParts.Count -gt 1) { $uParts[1] } else { "0" }
+            $uPatch = if ($uParts.Count -gt 2) { $uParts[2] } else { "0" }
+            $uBuild = if ($uParts.Count -gt 3) { $uParts[3] } else { "0" }
+            
+            $vTemplate = $config.autoupdate.version_format
+            
+            # 开始替换
+            $manifestVersion = $vTemplate -replace '\$url_?version', $urlVersion
+            $manifestVersion = $manifestVersion -replace '\$url_?major', $uMajor -replace '\$url_?minor', $uMinor -replace '\$url_?patch', $uPatch -replace '\$url_?build', $uBuild
+            
+            $manifestVersion = $manifestVersion -replace '\$pkg_?version', $pkgBaseVersion
+            $manifestVersion = $manifestVersion -replace '\$pkg_?major', $rMajor -replace '\$pkg_?minor', $rMinor -replace '\$pkg_?patch', $rPatch -replace '\$pkg_?build', $rBuild
+            
+            # 兼容原有相对上下文变量
+            $manifestVersion = $manifestVersion -replace '\$version', $pkgBaseVersion
+            $manifestVersion = $manifestVersion -replace '\$major', $rMajor -replace '\$minor', $rMinor -replace '\$patch', $rPatch -replace '\$build', $rBuild
+            
+            Write-Log "  Formatted manifest version using version_format: $manifestVersion"
+        } elseif ($detectedVersion -and $detectedVersion -ne $version) {
+            # 如果没有配置 version_format 但检测到了不同的内置版本号，则直接使用内置版本号
+            $manifestVersion = $detectedVersion
+            Write-Log "  No version_format found, using raw installer built-in version: $manifestVersion"
+        }
 
-            if ($manifestVersion -ne $version) {
-                $versionReplaced = $true
-                Write-Log "  Using installer built-in version: $manifestVersion (URL version: $version)"
+        # 如果最终确定的版本号与 URL 原始格式化后的版本号不同
+        if ($manifestVersion -ne $version) {
+            $versionReplaced = $true
+            Write-Log "  Manifest version ($manifestVersion) differs from URL version ($version)"
 
-                # 使用内置版本号再做一次 PR 存在性检查
-                if ($shouldSubmit) {
-                    Write-Log "  Re-checking PR existence with built-in version $manifestVersion"
-                    $existsWithBuiltIn = Test-WingetPRExists $id $manifestVersion
-                    if ($existsWithBuiltIn) {
-                        Write-Log "  PR already exists for $id $manifestVersion, will update local config only"
-                        $shouldSubmit = $false
-                    }
+            # 使用新版本号再做一次 PR 存在性检查
+            if ($shouldSubmit) {
+                Write-Log "  Re-checking PR existence with version $manifestVersion"
+                $existsWithNewVersion = Test-WingetPRExists $id $manifestVersion
+                if ($existsWithNewVersion) {
+                    Write-Log "  PR already exists for $id $manifestVersion, will update local config only"
+                    $shouldSubmit = $false
                 }
-            } else {
-                Write-Log "  Installer built-in version formatted to match URL version: $manifestVersion"
             }
         } else {
-            Write-Log "  Using URL version as manifest version: $manifestVersion"
+            Write-Log "  Final manifest version: $manifestVersion"
         }
 
 

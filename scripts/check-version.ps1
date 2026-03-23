@@ -112,19 +112,35 @@ $funcCompare = ${function:Compare-Versions}.ToString()
 
 $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     $pkg = $_
+    $pkgName = $pkg.BaseName
+    $currentId = $pkgName
+    $threadLogs = New-Object System.Collections.Generic.List[string]
+    function Write-ThreadLog($message, $level = 'INFO') {
+        $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        $threadLogs.Add("[$timestamp] [$currentId] [$level] $message")
+    }
+
+    # Override standard output commands to capture them in our thread log
+    function Write-Host {
+        param([Parameter(ValueFromRemainingArguments)]$Object)
+        if ($null -ne $Object) { Write-ThreadLog -message ($Object -join " ") -level "INFO" }
+    }
+    function Write-Warning {
+        param([string]$Message)
+        Write-ThreadLog -message $Message -level "WARNING"
+    }
+    function Write-Error {
+        param($Message)
+        $msg = if ($Message -is [System.Management.Automation.ErrorRecord]) { $Message.Exception.Message } else { $Message }
+        Write-ThreadLog -message $msg -level "ERROR"
+    }
+
     $scriptRoot = $using:PSScriptRoot
-    
     Set-Item -Path "Function:\Compare-Versions" -Value ([scriptblock]::Create($using:funcCompare))
 
     Import-Module powershell-yaml -ErrorAction SilentlyContinue
     . "$scriptRoot/resolve-version.ps1"
     . "$scriptRoot/scan-url-version.ps1"
-
-    $logs = @()
-    function Write-ThreadLog($message, $level = 'INFO') {
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $script:logs += "[$timestamp] [$level] $message"
-    }
 
     $update = $null
     $threadHasError = $false
@@ -132,6 +148,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     try {
         $config = Get-Content $pkg | ConvertFrom-Yaml
         $id = $config.id
+        if ($id) { $currentId = $id }
 
         Write-ThreadLog "Checking $id" -level "INFO"
 
@@ -188,7 +205,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     }
 
     return [PSCustomObject]@{
-        Logs     = $logs
+        Logs     = $threadLogs.ToArray()
         Update   = $update
         HasError = $threadHasError
     }

@@ -171,29 +171,7 @@ function Resolve-Version($config) {
                 
                 $urlVersion = $version
                 
-                # 如果配置了 update_version（自定义最终写入配置的格式）
-                if ($config.checkver.update_version) {
-                    $vParts = $version -split '\.'
-                    $rMajor = $vParts[0]
-                    $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { "0" }
-                    $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { "0" }
-                    $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
-                    
-                    $vTemplate = $config.checkver.update_version
-                    
-                    # URL 明确变量命名空间
-                    $version = $vTemplate.Replace('$url_version', $urlVersion)
-                    $version = $version.Replace('$url_major', $rMajor).Replace('$url_minor', $rMinor).Replace('$url_patch', $rPatch).Replace('$url_build', $rBuild)
-                    
-                    # PKG 明确变量暂用 URL 的值替代（以供初检比对）
-                    $version = $version.Replace('$pkg_version', $urlVersion)
-                    $version = $version.Replace('$pkg_major', $rMajor).Replace('$pkg_minor', $rMinor).Replace('$pkg_patch', $rPatch).Replace('$pkg_build', $rBuild)
-                    
-                    # 兼容原版的相对上下文变量
-                    $version = $version.Replace('$major', $rMajor).Replace('$minor', $rMinor).Replace('$patch', $rPatch).Replace('$build', $rBuild)
-                    
-                    Write-Host "  Using update_version formatted: $version"
-                }
+                    # 仅保留原始版本号返回
 
                 return [PSCustomObject]@{
                     Version = $version
@@ -246,33 +224,7 @@ function Resolve-Version($config) {
                     Write-Host " Found version (positional): $extractedVersion"
                 }
 
-                # 检查是否配置了 update_version 参数
-                if ($config.checkver.update_version) {
-                    # 解析提取的版本号各部分，支持 4 段版本号
-                    $versionParts = $extractedVersion -split '\.'
-                    $major = $versionParts[0]
-                    $minor = if ($versionParts.Length -gt 1) { $versionParts[1] } else { "0" }
-                    $patch = if ($versionParts.Length -gt 2) { $versionParts[2] } else { "0" }
-                    $build = if ($versionParts.Length -gt 3) { $versionParts[3] } else { "0" }
-                    
-                    # 对 update_version 进行变量替换
-                    $vTemplate = $config.checkver.update_version
-                    
-                    # URL 明确变量命名空间
-                    $version = $vTemplate.Replace('$url_version', $urlVersion)
-                    $version = $version.Replace('$url_major', $major).Replace('$url_minor', $minor).Replace('$url_patch', $patch).Replace('$url_build', $build)
-                    
-                    # PKG 明确变量暂用 URL 的值替代（以供初检比对）
-                    $version = $version.Replace('$pkg_version', $urlVersion)
-                    $version = $version.Replace('$pkg_major', $major).Replace('$pkg_minor', $minor).Replace('$pkg_patch', $patch).Replace('$pkg_build', $build)
-                    
-                    # 兼容原版的相对上下文变量
-                    $version = $version.Replace('$major', $major).Replace('$minor', $minor).Replace('$patch', $patch).Replace('$build', $build)
-                    
-                    Write-Host " Using update_version from config: $version"
-                } else {
-                    $version = $extractedVersion
-                }
+                $version = $extractedVersion
 
                 # 验证版本号格式
                 if ($version -and $version -match '^\d+(\.\d+)*(-[a-zA-Z0-9]+)?') {

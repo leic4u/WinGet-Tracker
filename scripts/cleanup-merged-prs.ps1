@@ -22,8 +22,13 @@ try {
         }
     }
     
+    # 先同步 fork 仓库，保持与 upstream (microsoft/winget-pkgs) 一致
+    Write-Host "Syncing fork with upstream..." -ForegroundColor Cyan
+    & $komacPath sync --token $env:WINGET_TOKEN 2>&1
+
     # 使用 komac cleanup 命令自动删除所有已合并/关闭的 PR 分支
     # --all 参数用于在 CI 环境中自动确认删除
+    Write-Host "Cleaning up merged/closed PR branches..." -ForegroundColor Cyan
     & $komacPath cleanup --all --token $env:WINGET_TOKEN 2>&1
     
     if ($LASTEXITCODE -eq 0) {

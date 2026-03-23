@@ -10,8 +10,8 @@ current_package:
       hash: B04D38491CBB078A99E43C0143D7C97916A1BD0463D2753C37A8AD4B7B5C1457
 checkver:
   url: "https://github.com/amir1376/ab-download-manager"
-  update_version: $urlVersion
 autoupdate:
+  version_format: $version
   architecture:
-    x64: https://github.com/amir1376/ab-download-manager/releases/download/v$urlVersion/ABDownloadManager_$urlVersion_windows_x64.exe
-    arm64: https://github.com/amir1376/ab-download-manager/releases/download/v$urlVersion/ABDownloadManager_$urlVersion_windows_arm64.exe
+    x64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_x64.exe
+    arm64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_arm64.exe

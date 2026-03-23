@@ -51,18 +51,12 @@ function Resolve-Download($config, $version, $urlVersion = $null, $checkverData 
         if (-not $templateUrl) {
             continue
         }
-        $downloadUrl = $templateUrl.Replace('$url_version', $urlVersion)
-        $downloadUrl = $downloadUrl.Replace('$url_major', $major)
-        $downloadUrl = $downloadUrl.Replace('$url_minor', $minor)
-        $downloadUrl = $downloadUrl.Replace('$url_patch', $patch)
-        $downloadUrl = $downloadUrl.Replace('$url_build', $build)
+        $downloadUrl = $templateUrl -replace '\$url_?version', $urlVersion
+        $downloadUrl = $downloadUrl -replace '\$url_?major', $major -replace '\$url_?minor', $minor -replace '\$url_?patch', $patch -replace '\$url_?build', $build
 
         # 保持原版的相对上下文变量
-        $downloadUrl = $downloadUrl.Replace('$version', $version)
-        $downloadUrl = $downloadUrl.Replace('$major', $major)
-        $downloadUrl = $downloadUrl.Replace('$minor', $minor)
-        $downloadUrl = $downloadUrl.Replace('$patch', $patch)
-        $downloadUrl = $downloadUrl.Replace('$build', $build)
+        $downloadUrl = $downloadUrl -replace '\$version', $version
+        $downloadUrl = $downloadUrl -replace '\$major', $major -replace '\$minor', $minor -replace '\$patch', $patch -replace '\$build', $build
 
         # Infer file type from URL
         $type = "exe"
