@@ -211,9 +211,9 @@ foreach ($item in $updates) {
             $manifestVersion = $manifestVersion -replace '\$pkg_?version', $pkgBaseVersion
             $manifestVersion = $manifestVersion -replace '\$pkg_?major', $rMajor -replace '\$pkg_?minor', $rMinor -replace '\$pkg_?patch', $rPatch -replace '\$pkg_?build', $rBuild
             
-            # 兼容原有相对上下文变量
-            $manifestVersion = $manifestVersion -replace '\$version', $pkgBaseVersion
-            $manifestVersion = $manifestVersion -replace '\$major', $rMajor -replace '\$minor', $rMinor -replace '\$patch', $rPatch -replace '\$build', $rBuild
+            # 兼容原有相对上下文变量 (在此上下文中，$version/$major 等始终代表原始 URL 版本)
+            $manifestVersion = $manifestVersion -replace '\$version', $urlVersion
+            $manifestVersion = $manifestVersion -replace '\$major', $uMajor -replace '\$minor', $uMinor -replace '\$patch', $uPatch -replace '\$build', $uBuild
             
             Write-Log "  Formatted manifest version using version_format: $manifestVersion"
         } elseif ($detectedVersion -and $detectedVersion -ne $version) {
