@@ -1,10 +1,10 @@
 id: Tencent.CoDesign.AxurePlugin
 current_package:
-  version: 1.4.6
+  version: "1.4.7"
   architecture:
     x86:
-      url: 
-      hash: 
+      url: https://static.codesign.qq.com/plugins/axure/CoDesign_Axure_latest.exe
+      hash: 6A1DF0FB5752BE17E33371C69C1E322D3220C07F75D6E4AF7F52BB3BEE91462D
 checkver:
   url: https://static.codesign.qq.com/plugins/axure/version.json
   jsonpath: version
