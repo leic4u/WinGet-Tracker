@@ -2,7 +2,7 @@ name: WinGet Tracker
 
 on:
   schedule:
-    - cron: "2,32 * * * *"
+    - cron: "32 * * * *"
   workflow_dispatch:
 
 jobs:
