@@ -7,6 +7,7 @@ Import-Module powershell-yaml
 
 . "$PSScriptRoot/resolve-version.ps1"
 . "$PSScriptRoot/scan-url-version.ps1"
+. "$PSScriptRoot/resolve-download.ps1"
 . "$PSScriptRoot/calc-hash.ps1"
 
 function Compare-Versions {
@@ -141,6 +142,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     Import-Module powershell-yaml -ErrorAction SilentlyContinue
     . "$scriptRoot/resolve-version.ps1"
     . "$scriptRoot/scan-url-version.ps1"
+    . "$scriptRoot/resolve-download.ps1"
 
     $update = $null
     $threadHasError = $false
@@ -185,14 +187,60 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
             Write-ThreadLog " Comparing versions: current='$currentVersion' vs remote='$version'" -level "INFO"
 
             if (Compare-Versions -v1 $version -v2 $currentVersion) {
-                $update = [PSCustomObject]@{
-                    id          = $id
-                    version     = $version
-                    url_version = $urlVersion
-                    file        = $pkg.Name
-                    data        = $checkverData
+                # Check if resolved URL matches current URL to avoid redundant updates
+                $isUrlMatching = $false
+                if ($config.autoupdate -and $config.autoupdate.architecture -and $config.current_package -and $config.current_package.architecture) {
+                    try {
+                        $resolvedUrls = Resolve-Download $config $version $urlVersion $checkverData
+                        $hasVariables = $false
+                        $allMatch = $true
+                        $checkedCount = 0
+                        
+                        foreach ($rUrl in $resolvedUrls) {
+                            $arch = $rUrl.arch
+                            $template = $config.autoupdate.architecture.$arch
+                            $templateUrl = if ($template -is [string]) { $template } else { $template.url }
+                            
+                            # Check for common version variables
+                            if ($templateUrl -match '\$(version|major|minor|patch|build|url_?version|url_?major|url_?minor|url_?patch|url_?build)') {
+                                $hasVariables = $true
+                                # Safeguard for accessing architecture properties
+                                $currentArch = if ($config.current_package.architecture -is [System.Collections.IDictionary]) { $config.current_package.architecture[$arch] } else { $config.current_package.architecture.$arch }
+                                $currentUrl = if ($currentArch -is [System.Collections.IDictionary]) { $currentArch['url'] } else { $currentArch.url }
+                                
+                                if ($currentUrl) {
+                                    $checkedCount++
+                                    if ($rUrl.url -ne $currentUrl) {
+                                        $allMatch = $false
+                                        break
+                                    }
+                                } else {
+                                    $allMatch = $false
+                                    break
+                                }
+                            }
+                        }
+                        
+                        if ($hasVariables -and $allMatch -and $checkedCount -gt 0) {
+                            $isUrlMatching = $true
+                        }
+                    } catch {
+                        Write-ThreadLog " Warning: Failed to resolve download URL for matching check: $_" -level "WARNING"
+                    }
                 }
-                Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
+
+                if ($isUrlMatching) {
+                    Write-ThreadLog " Skipping update: Resolved URL matches current URL even though version string differs" -level "INFO"
+                } else {
+                    $update = [PSCustomObject]@{
+                        id          = $id
+                        version     = $version
+                        url_version = $urlVersion
+                        file        = $pkg.Name
+                        data        = $checkverData
+                    }
+                    Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
+                }
             }
             else {
                 Write-ThreadLog " Up to date" -level "INFO"
