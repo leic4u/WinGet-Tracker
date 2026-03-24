@@ -1,10 +1,10 @@
 id: Axure.AxureRP.9
 current_package:
-  version: 9.0.0.3753
+  version: "9.0.0.3754"
   architecture:
     x86:
-      url: 
-      hash: 
+      url: https://axure.cachefly.net/versions/9-0/AxureRP-Setup-3754.exe
+      hash: D41BCB6F8A23C85E657E1EEC3218241D890DFA15A63BE3B7858C93D0B7515FCD
 checkver:
   url: https://www.axure.com/release-history/rp9
   regex: Axure RP (\d+\.\d+\.\d+\.\d+)
