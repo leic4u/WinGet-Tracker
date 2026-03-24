@@ -1,0 +1,13 @@
+id: GamePP.GamePP
+current_package:
+  version: 5.6.28.118
+  architecture:
+    x86:
+      url: 
+      hash: 
+checkver:
+  url: https://gamepp.com/log.html
+  regex: 游戏加加V (\d+\.\d+\.\d+\.\d+)
+autoupdate:
+  architecture:
+    x86: https://dl.gamepp.com/global/GamePP_International.exe

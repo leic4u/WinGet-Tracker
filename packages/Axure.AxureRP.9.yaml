@@ -1,0 +1,13 @@
+id: Axure.AxureRP.9
+current_package:
+  version: 9.0.0.3753
+  architecture:
+    x86:
+      url: 
+      hash: 
+checkver:
+  url: https://www.axure.com/release-history/rp9
+  regex: Axure RP (\d+\.\d+\.\d+\.\d+)
+autoupdate:
+  architecture:
+    x86: https://axure.cachefly.net/versions/9-0/AxureRP-Setup-$build.exe

@@ -1,0 +1,13 @@
+id: GamePP.GamePPLite
+current_package:
+  version: 6.1.21.120
+  architecture:
+    x86:
+      url: 
+      hash: 
+checkver:
+  url: https://gamepp.com/log.html
+  regex: 游戏加加轻量版V (\d+\.\d+\.\d+\.\d+)
+autoupdate:
+  architecture:
+    x86: https://dllite.gamepp.com/download/GamePPLite_Setup.exe
