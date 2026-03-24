@@ -6,8 +6,8 @@ current_package:
       url: 
       hash: 
 checkver:
-  url: https://codesign.qq.com/download?tab=axure
-  regex: v(\d+\.\d+\.\d+)
+  url: https://static.codesign.qq.com/plugins/axure/version.json
+  jsonpath: version
 autoupdate:
   architecture:
     x86: https://static.codesign.qq.com/plugins/axure/CoDesign_Axure_latest.exe
