@@ -78,50 +78,48 @@ function Resolve-Version($config) {
 
             # 从 JSON 响应中提取版本号
             $jsonPath = $config.checkver.jsonpath
-            Write-Host " Extracting version using jsonpath: $jsonPath"
+            Write-Host "  Extracting version using jsonpath: $jsonPath"
 
-            # 支持点号分隔的路径，如 "data.version" 或 "data.list[*].app_version"
-            $parts = $jsonPath -split "\\."
+            # 支持点号分隔的路径，如 "data.version"
+            $parts = $jsonPath -split "\."
             $current = $response
-            $arrayMode = $false
-            $extractField = $null
-
             foreach ($part in $parts) {
-                if ($arrayMode) {
-                    # 数组模式：[*] 后面的部分是字段名
-                    $extractField = $part
-                    break
-                } elseif ($part -eq "*") {
-                    # 遇到 [*] 标记，进入数组模式
-                    $arrayMode = $true
-                    continue
-                } elseif ($current -is [System.Collections.IDictionary]) {
+                if ($current -is [System.Collections.IDictionary]) {
                     $current = $current[$part]
-                } elseif ($current.PSObject.Properties[$part]) {
+                }
+                elseif ($current.PSObject.Properties[$part]) {
                     $current = $current.$part
-                } else {
+                }
+                else {
                     $current = $null
                     break
                 }
             }
 
             if ($current) {
-                # 处理数组类型的响应
-                if ($current -is [System.Array] -or $arrayMode) {
+                # 处理数组类型的响应（如版本列表）
+                if ($current -is [System.Array]) {
                     $versions = @()
                     foreach ($item in $current) {
                         $itemVersion = $null
-                        if ($extractField) {
-                            # 从数组元素中提取指定字段
-                            if ($item.PSObject.Properties[$extractField]) {
-                                $itemVersion = $item.$extractField.ToString()
+                        # 优先使用配置中指定的版本字段
+                        if ($config.checkver.version_field) {
+                            $versionField = $config.checkver.version_field
+                            if ($item.PSObject.Properties[$versionField]) {
+                                $itemVersion = $item.$versionField.ToString()
                             }
-                        } elseif ($item -is [string]) {
-                            $itemVersion = $item
-                        } elseif ($item.PSObject.Properties["version"]) {
+                        }
+                        # 如果没有指定版本字段，尝试常见的字段名
+                        elseif ($item.PSObject.Properties["app_version"]) {
+                            $itemVersion = $item.app_version.ToString()
+                        }
+                        elseif ($item.PSObject.Properties["version"]) {
                             $itemVersion = $item.version.ToString()
                         }
-
+                        elseif ($item -is [string]) {
+                            $itemVersion = $item
+                        }
+                        
                         if ($itemVersion) {
                             # 应用排除模式过滤
                             if ($config.checkver.exclude_pattern) {
@@ -133,13 +131,13 @@ function Resolve-Version($config) {
                             }
                         }
                     }
-
+                    
                     if ($versions.Count -gt 0) {
                         # 返回最新的版本
                         $version = ($versions | Sort-Object {[version]$_} -Descending)[0]
-                        Write-Host " Found latest version after filtering: $version"
+                        Write-Host "  Found latest version after filtering: $version"
                     } else {
-                        Write-Warning " No versions found after filtering"
+                        Write-Warning "  No versions found after filtering"
                         return $null
                     }
                 } else {

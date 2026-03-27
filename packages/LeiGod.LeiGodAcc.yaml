@@ -10,7 +10,7 @@ checkver:
   method: GET
   headers:
     Content-Type: "application/json;charset=UTF-8"
-  jsonpath: "data.list[*].app_version"
+  jsonpath: "data.list.app_version"
   exclude_pattern: "99"
 autoupdate:
   architecture:
