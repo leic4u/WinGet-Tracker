@@ -26,7 +26,8 @@ function Update-PackageCurrentInfo {
         $replacement += "    $($d.arch):`n      url: $($d.url)`n"
         if ($d.hash) {
             $replacement += "      hash: $($d.hash)`n"
-        } else {
+        }
+        else {
             $replacement += "      hash: `"`"`n"
         }
     }
@@ -34,7 +35,8 @@ function Update-PackageCurrentInfo {
     # 如果原文件没有 current_package 节点，则直接追加到末尾
     if ($yaml -match $pattern) {
         $yaml = $yaml -replace $pattern, $replacement
-    } else {
+    }
+    else {
         # 如果不是以换行符结尾，补充一个
         if (-not $yaml.EndsWith("`n")) { $yaml += "`n" }
         $yaml += $replacement
@@ -102,7 +104,8 @@ foreach ($item in $updates) {
         $shouldSubmit = -not $exists
         if ($exists) {
             Write-Log "  PR already exists for $id $version, will update local config only"
-        } else {
+        }
+        else {
             Write-Log " Processing $id -> $version"
         }
 
@@ -127,18 +130,19 @@ foreach ($item in $updates) {
             try {
                 $result = Get-InstallerHash $d.url
                 return [PSCustomObject]@{
-                    Success = $true
-                    url = $d.url
-                    arch = $d.arch
-                    hash = $result.Hash
+                    Success  = $true
+                    url      = $d.url
+                    arch     = $d.arch
+                    hash     = $result.Hash
                     filePath = $result.FilePath
                 }
-            } catch {
+            }
+            catch {
                 return [PSCustomObject]@{
                     Success = $false
-                    url = $d.url
-                    arch = $d.arch
-                    Error = $_.Exception.Message
+                    url     = $d.url
+                    arch    = $d.arch
+                    Error   = $_.Exception.Message
                 }
             }
         }
@@ -159,11 +163,13 @@ foreach ($item in $updates) {
                     $detectedVersion = Get-InstallerVersion $res.filePath
                     if ($detectedVersion) {
                         Write-Log "  Detected installer built-in version: $detectedVersion"
-                    } else {
+                    }
+                    else {
                         Write-Log "  Could not detect built-in version from installer"
                     }
                 }
-            } else {
+            }
+            else {
                 Write-Log "  Error calculating hash for $($res.arch): $($res.Error)"
             }
         }
@@ -216,7 +222,8 @@ foreach ($item in $updates) {
             $manifestVersion = $manifestVersion -replace '\$major', $uMajor -replace '\$minor', $uMinor -replace '\$patch', $uPatch -replace '\$build', $uBuild
             
             Write-Log "  Formatted manifest version using version_format: $manifestVersion"
-        } elseif ($detectedVersion -and $detectedVersion -ne $version) {
+        }
+        elseif ($detectedVersion -and $detectedVersion -ne $version) {
             # 如果没有配置 version_format 但检测到了不同的内置版本号，则直接使用内置版本号
             $manifestVersion = $detectedVersion
             Write-Log "  No version_format found, using raw installer built-in version: $manifestVersion"
@@ -236,7 +243,8 @@ foreach ($item in $updates) {
                     $shouldSubmit = $false
                 }
             }
-        } else {
+        }
+        else {
             Write-Log "  Final manifest version: $manifestVersion"
         }
 
@@ -305,7 +313,7 @@ foreach ($item in $updates) {
                                     --state open `
                                     --search "$searchQuery" `
                                     --author "@me" `
-                                    --json number,title `
+                                    --json number, title `
                                     2>&1
 
                                 $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -317,49 +325,39 @@ foreach ($item in $updates) {
                                         --title "$newTitle" `
                                         2>&1
                                     Write-Log "  PR title updated to: $newTitle"
-                                } else {
+                                }
+                                else {
                                     Write-Log "  Warning: Could not find the submitted PR to update title"
                                 }
-                            } catch {
+                            }
+                            catch {
                                 Write-Log "  Warning: Failed to update PR title: $_"
-                            } finally {
+                            }
+                            finally {
                                 $env:GH_TOKEN = $null
                             }
                         }
-                        
-                        # 只有在真正需要提交新 PR 时才创建本地分支
-                        # 如果 komac 检测到已存在的 PR，它会成功退出但不会创建新 PR
-                        # 在这种情况下，我们不应该创建本地分支
-                        if ($shouldSubmit) {
-                            # 创建本地 branch for PR tracking
-                            $prBranchName = "${id}-v${manifestVersion}"
-                            try {
-                                git checkout -b $prBranchName 2>&1
-                                git push origin $prBranchName 2>&1
-                                Write-Log "  Created local branch: $prBranchName"
-                            } catch {
-                                Write-Log "  Warning: Failed to create local branch: $_"
-                                # 回到 main branch
-                                git checkout main 2>&1
-                            }
-                        }
-                    } else {
+                    }
+                    else {
                         if ($outputStr -match "does not exist in microsoft/winget-pkgs") {
                             Write-Log "  Package $id does not exist in winget-pkgs. Skipping PR submission."
                             $packageNotFound = $true
                             break
-                        } else {
+                        }
+                        else {
                             throw "komac exited with code $LASTEXITCODE"
                         }
                     }
-                } catch {
+                }
+                catch {
                     $retryCount++
                     Write-Log "  Attempt $retryCount failed: $_"
                     if ($retryCount -lt $maxRetries) {
                         $delay = 30 * $retryCount
                         Write-Log "  Retrying in $delay seconds..."
                         Start-Sleep -Seconds $delay
-                    } else {
+                    }
+                    else {
                         Write-Log "  Error: Failed after $maxRetries attempts"
                         Write-Log "  Last error: $_"
                         $hasFatalError = $true
@@ -385,14 +383,17 @@ foreach ($item in $updates) {
                     git commit -m "Update $id to $manifestVersion" -m "- Update current_package with version, urls and hashes" 2>&1
                     git push 2>&1
                     Write-Log "  Successfully pushed changes to GitHub"
-                } catch {
+                }
+                catch {
                     Write-Log "  Warning: Failed to push changes to GitHub: $_"
                 }
-            } catch {
+            }
+            catch {
                 Write-Log "  Warning: Failed to update current_package: $_"
             }
         }
-    } catch {
+    }
+    catch {
         Write-Log " Error processing $($item.id): $_"
         $hasFatalError = $true
     }
@@ -401,7 +402,8 @@ foreach ($item in $updates) {
 if ($hasFatalError) {
     Write-Log "Submission process completed with fatal errors."
     exit 1
-} else {
+}
+else {
     Write-Log "Submission process complete."
     exit 0
 }
