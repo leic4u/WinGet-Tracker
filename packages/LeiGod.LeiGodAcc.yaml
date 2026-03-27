@@ -3,7 +3,7 @@ current_package:
   version: "11.3.1.4"
   architecture:
     x86:
-      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.1.5.exe
+      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.1.4.exe
       hash: 227346858634E77979D22AC88C4B7BFAFFCE3C22E130932106B27ABA2EBA3E07
 checkver:
   url: https://secapiv11.leigod.com/tools/version/list?size=99
