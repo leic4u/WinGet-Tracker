@@ -8,7 +8,6 @@ function Resolve-Download($config, $version, $urlVersion = $null, $checkverData 
     }
 
     # 解析未格式化的原始版本号各部分，支持 4 段版本号: 3.28.3.134742 -> major=3, minor=28, patch=3, build=134742
-    # 这样可以确保即使 update_version 裁剪了尾部，autoupdate 替换的变量仍然完整含有 build 等信息。
     $versionParts = $urlVersion -split '\.'
     $major = $versionParts[0]
     $minor = if ($versionParts.Length -gt 1) { $versionParts[1] } else { "0" }
@@ -51,14 +50,14 @@ function Resolve-Download($config, $version, $urlVersion = $null, $checkverData 
         if (-not $templateUrl) {
             continue
         }
-        $downloadUrl = $templateUrl -replace '\$url_?version', $urlVersion
-        $downloadUrl = $downloadUrl -replace '\$url_?major', $major -replace '\$url_?minor', $minor -replace '\$url_?patch', $patch -replace '\$url_?build', $build
+        $downloadUrl = $templateUrl -replace '\$url[Vv]ersion', $urlVersion
+        $downloadUrl = $downloadUrl -replace '\$url[Mm]ajor', $major -replace '\$url[Mm]inor', $minor -replace '\$url[Pp]atch', $patch -replace '\$url[Bb]uild', $build
 
         # 保持原版的相对上下文变量
         $downloadUrl = $downloadUrl -replace '\$version', $version
         $downloadUrl = $downloadUrl -replace '\$major', $major -replace '\$minor', $minor -replace '\$patch', $patch -replace '\$build', $build
 
-        # Infer file type from URL
+        # 根据 URL 推断文件类型
         $type = "exe"
         if ($downloadUrl -match "\.msi$") { $type = "msi" }
         elseif ($downloadUrl -match "\.msix|\.appx") { $type = "msix" }

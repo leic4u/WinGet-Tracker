@@ -199,11 +199,11 @@ checkver:
 | `$patch` | 修订版本号 |
 | `$build` | 构建号 |
 
-### URL 原始版本变量 ($url_*)
-用于区分原始版本和格式化版本，支持下划线和无下划线两种格式（`$url_version` 或 `$urlversion`）。
+### URL 原始版本变量 ($url*)
+用于区分原始版本和格式化版本，支持全小写和驼峰式两种格式（`$urlversion` 或 `$urlVersion`）。
 
-### 安装包版本变量 ($pkg_*)
-从安装包提取的版本，支持下划线和无下划线两种格式（`$pkg_version` 或 `$pkgversion`）。
+### 安装包版本变量 ($pkg*)
+从安装包提取的版本，支持全小写和驼峰式两种格式（`$pkgversion` 或 `$pkgVersion`）。
 
 ## PR 提交说明
 

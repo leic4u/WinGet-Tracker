@@ -121,7 +121,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
         $threadLogs.Add("[$timestamp] [$currentId] [$level] $message")
     }
 
-    # Override standard output commands to capture them in our thread log
+    # 覆盖标准输出命令，将其捕获到我们的线程日志中
     function Write-Host {
         param([Parameter(ValueFromRemainingArguments)]$Object)
         if ($null -ne $Object) { Write-ThreadLog -message ($Object -join " ") -level "INFO" }
@@ -187,7 +187,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
             Write-ThreadLog " Comparing versions: current='$currentVersion' vs remote='$version'" -level "INFO"
 
             if (Compare-Versions -v1 $version -v2 $currentVersion) {
-                # Check if resolved URL matches current URL to avoid redundant updates
+                # 检查解析后的 URL 是否与当前 URL 匹配，以避免重复更新
                 $isUrlMatching = $false
                 if ($config.autoupdate -and $config.autoupdate.architecture -and $config.current_package -and $config.current_package.architecture) {
                     try {
@@ -201,10 +201,10 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                             $template = $config.autoupdate.architecture.$arch
                             $templateUrl = if ($template -is [string]) { $template } else { $template.url }
                             
-                            # Check for common version variables
-                            if ($templateUrl -match '\$(version|major|minor|patch|build|url_?version|url_?major|url_?minor|url_?patch|url_?build)') {
+                            # 检查通用版本变量
+                            if ($templateUrl -match '\$(version|major|minor|patch|build|url[Vv]ersion|url[Mm]ajor|url[Mm]inor|url[Pp]atch|url[Bb]uild)') {
                                 $hasVariables = $true
-                                # Safeguard for accessing architecture properties
+                                # 保护架构属性访问的安全措施
                                 $currentArch = if ($config.current_package.architecture -is [System.Collections.IDictionary]) { $config.current_package.architecture[$arch] } else { $config.current_package.architecture.$arch }
                                 $currentUrl = if ($currentArch -is [System.Collections.IDictionary]) { $currentArch['url'] } else { $currentArch.url }
                                 

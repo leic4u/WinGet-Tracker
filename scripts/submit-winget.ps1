@@ -13,7 +13,7 @@ function Update-PackageCurrentInfo {
 
     $yaml = Get-Content $filePath -Raw
 
-    # 清除旧版遗留の current_version 和 top-level architecture
+    # 清除旧版遗留的 current_version 和 top-level architecture
     $yaml = $yaml -replace '(?m)^current_version:.*\r?\n?', ''
     $yaml = $yaml -replace '(?m)^architecture:\r?\n(?:^[ \t]+.*\r?\n?)*', ''
 
@@ -211,12 +211,10 @@ foreach ($item in $updates) {
             $vTemplate = $config.autoupdate.version_format
             
             # 开始替换
-            $manifestVersion = $vTemplate -replace '\$url_?version', $urlVersion
-            $manifestVersion = $manifestVersion -replace '\$url_?major', $uMajor -replace '\$url_?minor', $uMinor -replace '\$url_?patch', $uPatch -replace '\$url_?build', $uBuild
-            
-            $manifestVersion = $manifestVersion -replace '\$pkg_?version', $pkgBaseVersion
-            $manifestVersion = $manifestVersion -replace '\$pkg_?major', $rMajor -replace '\$pkg_?minor', $rMinor -replace '\$pkg_?patch', $rPatch -replace '\$pkg_?build', $rBuild
-            
+            $manifestVersion = $vTemplate -replace '\$url[Vv]ersion', $urlVersion
+            $manifestVersion = $manifestVersion -replace '\$url[Mm]ajor', $uMajor -replace '\$url[Mm]inor', $uMinor -replace '\$url[Pp]atch', $uPatch -replace '\$url[Bb]uild', $uBuild
+            $manifestVersion = $manifestVersion -replace '\$pkg[Vv]ersion', $pkgBaseVersion
+            $manifestVersion = $manifestVersion -replace '\$pkg[Mm]ajor', $rMajor -replace '\$pkg[Mm]inor', $rMinor -replace '\$pkg[Pp]atch', $rPatch -replace '\$pkg[Bb]uild', $rBuild
             # 兼容原有相对上下文变量 (在此上下文中，$version/$major 等始终代表原始 URL 版本)
             $manifestVersion = $manifestVersion -replace '\$version', $urlVersion
             $manifestVersion = $manifestVersion -replace '\$major', $uMajor -replace '\$minor', $uMinor -replace '\$patch', $uPatch -replace '\$build', $uBuild
