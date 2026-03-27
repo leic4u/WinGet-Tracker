@@ -152,11 +152,10 @@ autoupdate:
 | `current_package.architecture` | 支持的架构及对应的下载信息 |
 | `checkver.url` | 版本检查的目标 URL |
 | `checkver.regex` | 从页面提取版本的正则表达式 |
-| `checkver.jsonpath` | 从 JSON 响应提取版本的路径（可选） |
+| `checkver.jsonpath` | 从 JSON 响应提取版本的路径，支持 `[*]` 数组通配符 |
 | `checkver.method` | HTTP 请求方法（GET/POST/PUT，默认 GET） |
 | `checkver.headers` | 可选，自定义 HTTP 请求头 |
 | `checkver.body` | 可选，POST/PUT 请求体 |
-| `checkver.version_field` | 可选，数组响应中的版本字段名 |
 | `checkver.exclude_pattern` | 可选，排除匹配的版本 |
 | `autoupdate.version_format` | 可选，自定义 manifest 版本的格式 |
 | `autoupdate.architecture` | 自动更新 URL 模板 |
@@ -184,7 +183,8 @@ checkver:
 checkver:
   url: https://api.example.com/v1/version
   method: GET
-  jsonpath: data.version
+  jsonpath: data.list[*].app_version
+  exclude_pattern: "99"  # 可选，排除匹配的版本
 ```
 从 JSON API 响应提取版本号。
 

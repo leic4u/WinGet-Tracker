@@ -1,6 +1,6 @@
 id: LeiGod.LeiGodAcc
 current_package:
-  version: "11.3.1.5"
+  version: "11.3.1.4"
   architecture:
     x86:
       url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.1.5.exe
@@ -10,8 +10,7 @@ checkver:
   method: GET
   headers:
     Content-Type: "application/json;charset=UTF-8"
-  jsonpath: "data.list"
-  version_field: "app_version"
+  jsonpath: "data.list[*].app_version"
   exclude_pattern: "99"
 autoupdate:
   architecture:
