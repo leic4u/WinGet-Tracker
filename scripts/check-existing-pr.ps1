@@ -58,11 +58,11 @@ function Test-WingetPRExists {
             # 检查分支名是否匹配
             $branchMatch = $pr.headRefName -match [regex]::Escape($id) -or $pr.headRefName -match [regex]::Escape($version)
             
-            # 检查是否已合并（通过 state 为 MERGED 或 mergedAt 有值）
-            $isMerged = ($pr.state -eq 'MERGED') -or ($null -ne $pr.mergedAt)
+            # 检查是否应该跳过提交：OPEN（开放）或 MERGED（已合并）状态
+            $shouldSkip = ($pr.state -eq 'OPEN') -or ($pr.state -eq 'MERGED') -or ($null -ne $pr.mergedAt)
             
-            if (($titleMatch -or $branchMatch) -and $isMerged) {
-                $status = if ($isMerged) { "merged" } else { "open/closed" }
+            if (($titleMatch -or $branchMatch) -and $shouldSkip) {
+                $status = if ($pr.state -eq 'OPEN') { "open" } elseif ($pr.state -eq 'MERGED' -or $null -ne $pr.mergedAt) { "merged" } else { $pr.state }
                 Write-Host "  Found existing PR #$($pr.number): $($pr.title) (status: $status)"
                 return $true
             }
