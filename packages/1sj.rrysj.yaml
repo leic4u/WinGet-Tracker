@@ -1,0 +1,11 @@
+id: 1sj.rrysj
+current_package:
+  version: "3.1.4"
+  architecture:
+checkver:
+  url: https://api.1sj.tv/checkUpdate
+  regex: ysj(\d+\.\d+\.\d+)
+autoupdate:
+  architecture:
+    x64: https://api.1sj.tv/mainpage/downloadProgram?type=5
+    x86: https://api.1sj.tv/mainpage/downloadProgram?type=3
