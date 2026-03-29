@@ -1,16 +1,16 @@
 id: zhongyang219.TrafficMonitor.Full
 current_package:
-  version: "1.85"
+  version: "1.86"
   architecture:
+    x86:
+      url: https://github.com/zhongyang219/TrafficMonitor/releases/download/V1.86/TrafficMonitor_V1.86_x86.zip
+      hash: 2DDDBD07F54607035F7B54D15EF2597844335EE343AFE5F9DDB004E7F0725F04
     x64:
-      url: https://github.com/zhongyang219/TrafficMonitor/releases/download/V1.85/TrafficMonitor_V1.85_x64.zip
+      url: https://github.com/zhongyang219/TrafficMonitor/releases/download/V1.86/TrafficMonitor_V1.86_x64.zip
       hash: 948DDC12CC582E8CF0B7B32E0064544F6F711265A7671C2E47343A6A0FF4908E
     arm64:
-      url: https://github.com/zhongyang219/TrafficMonitor/releases/download/V1.85/TrafficMonitor_V1.85_arm64ec.zip
+      url: https://github.com/zhongyang219/TrafficMonitor/releases/download/V1.86/TrafficMonitor_V1.86_arm64ec.zip
       hash: 20245BD1472D60283CBD081DBFAB519CF46D3C71AC265C747498917196381C92
-    x86:
-      url: https://github.com/zhongyang219/TrafficMonitor/releases/download/V1.85/TrafficMonitor_V1.85_x86.zip
-      hash: 2DDDBD07F54607035F7B54D15EF2597844335EE343AFE5F9DDB004E7F0725F04
 checkver:
   url: "https://github.com/zhongyang219/TrafficMonitor"
 autoupdate:
