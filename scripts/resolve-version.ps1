@@ -23,12 +23,12 @@ function Resolve-Version($config) {
             $release = Invoke-RestMethod $apiUrl -Headers $headers -ErrorAction Stop
 
             if ($release.tag_name) {
-                $version = $release.tag_name.TrimStart("v")
+                $version = $release.tag_name -replace '^[vV]', ''
                 Write-Host "  Found version from GitHub API: $version"
                 return $version
             }
             if ($release.name) {
-                $version = $release.name.TrimStart("v")
+                $version = $release.name -replace '^[vV]', ''
                 Write-Host "  Found version from GitHub API: $version"
                 return $version
             }
