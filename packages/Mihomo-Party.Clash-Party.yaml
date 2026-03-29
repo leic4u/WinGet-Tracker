@@ -1,16 +1,16 @@
 id: Mihomo-Party.Clash-Party
 current_package:
-  version: "1.9.3"
+  version: "1.9.4"
   architecture:
-    x64:
-      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.3/clash-party-windows-1.9.3-x64-setup.exe
-      hash: 32D608F010DEEBE0EC8DE2950E66C09D6B35AF309ED7C28F18456BDE1394EEAD
     arm64:
-      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.3/clash-party-windows-1.9.3-arm64-setup.exe
-      hash: 4B6AE6BF77FBF7073BE32A16683478037FAB75240141A03A5B4D063867BCCE24
+      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.4/clash-party-windows-1.9.4-arm64-setup.exe
+      hash: C19A67299ADFCB64859315B0D71B27C083F5C95621EBB6DFFFBA2175B6C454F1
+    x64:
+      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.4/clash-party-windows-1.9.4-x64-setup.exe
+      hash: 3F0A8BFE87AB7298CA1C565AB08A174AAA521ABA7278E0396D5D05747C2D4E30
     x86:
-      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.3/clash-party-windows-1.9.3-ia32-setup.exe
-      hash: 651BF413C522D18265FC376B2393FB5F318D9130B83799FA840287464664EE3E
+      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.4/clash-party-windows-1.9.4-ia32-setup.exe
+      hash: E9D4D688AE8BD75DACF2B5B8FE34A90E9494CD61C92FB55987A22141A788F49E
 checkver:
   url: "https://github.com/mihomo-party-org/clash-party"
 autoupdate:
