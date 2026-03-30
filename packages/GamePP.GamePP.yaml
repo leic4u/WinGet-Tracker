@@ -1,7 +1,10 @@
 id: GamePP.GamePP
 current_package:
-  version: "5.6.28.119"
+  version: "5.6.51.327"
   architecture:
+    x86:
+      url: https://dl-update.gamepp.com/global/update/Setup_5.6.51.327.exe
+      hash: F8C731660AEF707F573754B3199F4B805AD2916858C7ED2D497A358FC2CBAA72
 checkver:
   url: https://liveupdate2.gamepp.com/checkupdate/update.php?m=2
   jsonpath: "data.version"
