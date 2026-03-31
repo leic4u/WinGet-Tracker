@@ -1,0 +1,12 @@
+id: tonhowtf.OmniGet
+current_package:
+  version: 0.3.6
+  architecture:
+    x64:
+      url: https://github.com/tonhowtf/omniget/releases/download/v0.3.6/omniget_0.3.6_x64-setup.exe
+      hash: 
+checkver:
+  url: "https://github.com/tonhowtf/omniget"
+autoupdate:
+  architecture:
+    x64: https://github.com/tonhowtf/omniget/releases/download/v$version/omniget_$version_x64-setup.exe
