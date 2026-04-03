@@ -1,10 +1,10 @@
 id: GamePP.GamePPLite
 current_package:
-  version: "6.1.41.120"
+  version: "6.1.80.320"
   architecture:
     x86:
-      url: https://dllite.gamepp.com/download/GamePPLite_Setup.exe
-      hash: AC91F500B67FD05C3237E37FF37B9B0BDED475336842F1B12F4D98E400CB67D3
+      url: https://dllite.gamepp.com/checkupdate/update/Setup_6.1.80.320.exe
+      hash: 00A873A125BDAD6239B3E135AC7C35F33E1EE6632D41A9295C4FB1026D62DBC4
 checkver:
   url: https://liveupdate-lite.gamepp.com/checkupdate/updatelite.php?version=0&m=2
   jsonpath: "data.version"
