@@ -1,7 +1,10 @@
 id: tonhowtf.OmniGet
 current_package:
-  version: "0.3.7"
+  version: "0.4.0"
   architecture:
+    x64:
+      url: https://github.com/tonhowtf/omniget/releases/download/v0.4.0/omniget_0.4.0_x64-setup.exe
+      hash: 1E936A07E4750160ADD6B8F69ACFF855E6AD5C27F12442E0CE18074E27CDD87C
 checkver:
   url: "https://github.com/tonhowtf/omniget"
 autoupdate:
