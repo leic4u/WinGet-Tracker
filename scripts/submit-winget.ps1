@@ -4,6 +4,17 @@ Import-Module powershell-yaml
 . "$PSScriptRoot/check-existing-pr.ps1"
 . "$PSScriptRoot/get-installer-version.ps1"
 
+# 同步 komac 储存库，确保使用最新的 manifest 数据
+$komacPath = "$env:LOCALAPPDATA\Programs\Komac\bin\komac.exe"
+if (-not (Test-Path $komacPath)) {
+    $komacPath = "komac"
+}
+Write-Host "Syncing komac repository..."
+& $komacPath sync 2>&1 | Write-Host
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Warning: komac sync exited with code $LASTEXITCODE"
+}
+
 function Update-PackageCurrentInfo {
     param(
         [string]$filePath,
