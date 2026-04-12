@@ -1,5 +1,8 @@
 name: WinGet Tracker
 
+env:
+  ACTIONS_STEP_DEBUG: true
+
 on:
   schedule:
     - cron: "32 * * * *"
@@ -39,3 +42,9 @@ jobs:
           ./scripts/cleanup-merged-prs.ps1
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+      - name: Show token scopes
+        run: |
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/ |
+               jq .permissions
