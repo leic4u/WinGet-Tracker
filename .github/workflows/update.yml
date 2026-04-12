@@ -35,6 +35,7 @@ jobs:
           ./scripts/submit-winget.ps1
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          ACTIONS_STEP_DEBUG: true
 
       - name: Cleanup merged PR branches
         shell: pwsh
@@ -42,6 +43,7 @@ jobs:
           ./scripts/cleanup-merged-prs.ps1
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          ACTIONS_STEP_DEBUG: true
       - name: Show token scopes (PowerShell)
         shell: pwsh
         run: |
@@ -51,3 +53,6 @@ jobs:
               "Accept"        = "application/vnd.github+json"
             }
           $response.permissions | ConvertTo-Json -Depth 2 | Write-Output
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          ACTIONS_STEP_DEBUG: true
