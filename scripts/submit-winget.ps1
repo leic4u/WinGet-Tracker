@@ -10,7 +10,7 @@ if (-not (Test-Path $komacPath)) {
     $komacPath = "komac"
 }
 Write-Host "Syncing komac repository..."
-& $komacPath sync 2>&1 | Write-Host
+& $komacPath sync --token $env:WINGET_TOKEN 2>&1 | Write-Host
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Warning: komac sync exited with code $LASTEXITCODE"
 }
