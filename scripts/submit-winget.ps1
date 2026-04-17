@@ -84,6 +84,44 @@ function Update-PackagePR {
     $yaml | Set-Content $filePath -Encoding UTF8
 }
 
+function Get-ManifestVersion {
+    param(
+        $config,
+        [string]$version,
+        [string]$urlVersion,
+        [string]$detectedVersion
+    )
+
+    $manifestVersion = $version
+
+    if ($config.autoupdate.version_format) {
+        $pkgBaseVersion = if ($detectedVersion) { $detectedVersion } else { $urlVersion }
+        $vParts = $pkgBaseVersion -split '\.'
+        $rMajor = $vParts[0]
+        $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { '0' }
+        $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { '0' }
+        $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { '0' }
+
+        $uParts = $urlVersion -split '\.'
+        $uMajor = $uParts[0]
+        $uMinor = if ($uParts.Count -gt 1) { $uParts[1] } else { '0' }
+        $uPatch = if ($uParts.Count -gt 2) { $uParts[2] } else { '0' }
+        $uBuild = if ($uParts.Count -gt 3) { $uParts[3] } else { '0' }
+
+        $vTemplate = $config.autoupdate.version_format
+        $manifestVersion = $vTemplate -replace '\$url[Vv]ersion', $urlVersion
+        $manifestVersion = $manifestVersion -replace '\$url[Mm]ajor', $uMajor -replace '\$url[Mm]inor', $uMinor -replace '\$url[Pp]atch', $uPatch -replace '\$url[Bb]uild', $uBuild
+        $manifestVersion = $manifestVersion -replace '\$pkg[Vv]ersion', $pkgBaseVersion
+        $manifestVersion = $manifestVersion -replace '\$pkg[Mm]ajor', $rMajor -replace '\$pkg[Mm]inor', $rMinor -replace '\$pkg[Pp]atch', $rPatch -replace '\$pkg[Bb]uild', $rBuild
+        $manifestVersion = $manifestVersion -replace '\$version', $urlVersion
+        $manifestVersion = $manifestVersion -replace '\$major', $uMajor -replace '\$minor', $uMinor -replace '\$patch', $uPatch -replace '\$build', $uBuild
+    } elseif ($detectedVersion -and $detectedVersion -ne $version) {
+        $manifestVersion = $detectedVersion
+    }
+
+    return $manifestVersion
+}
+
 $hasFatalError = $false
 $updatesFile = "$PSScriptRoot/../updates.json"
 $logFile = "$PSScriptRoot/../logs/submit-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
@@ -144,8 +182,12 @@ foreach ($item in $updates) {
         $exists = if ($prResult -is [PSCustomObject] -and $prResult.Exists) { $true } else { [bool]$prResult }
         $shouldSubmit = -not $exists
         $skipDownload = $false
-        $manifestVersion = $version
+        $manifestVersion = Get-ManifestVersion -config $config -version $version -urlVersion $urlVersion -detectedVersion $null
         $prUrl = $null  # 用于记录 PR URL
+
+        if ($manifestVersion -ne $version) {
+            Write-Log "  Formatted manifest version using version_format: $manifestVersion"
+        }
 
         if ($exists) {
             Write-Log "  PR already exists for $id $version, skipping download"
@@ -242,42 +284,12 @@ foreach ($item in $updates) {
             }
 
             # 决定 manifest 版本号
-            $manifestVersion = $version  # 默认使用 URL 版本号
+            $manifestVersion = Get-ManifestVersion -config $config -version $version -urlVersion $urlVersion -detectedVersion $detectedVersion
             $versionReplaced = $false
 
-            # 如果配置了 version_format，则应用格式化
             if ($config.autoupdate.version_format) {
-                # PKG 变量部分 - 优先使用检测到的版本号，如果没有则回退到 URL 版本号
-                $pkgBaseVersion = if ($detectedVersion) { $detectedVersion } else { $urlVersion }
-                $vParts = $pkgBaseVersion -split '\.'
-                $rMajor = $vParts[0]
-                $rMinor = if ($vParts.Count -gt 1) { $vParts[1] } else { "0" }
-                $rPatch = if ($vParts.Count -gt 2) { $vParts[2] } else { "0" }
-                $rBuild = if ($vParts.Count -gt 3) { $vParts[3] } else { "0" }
-
-                # URL 变量部分
-                $uParts = $urlVersion -split '\.'
-                $uMajor = $uParts[0]
-                $uMinor = if ($uParts.Count -gt 1) { $uParts[1] } else { "0" }
-                $uPatch = if ($uParts.Count -gt 2) { $uParts[2] } else { "0" }
-                $uBuild = if ($uParts.Count -gt 3) { $uParts[3] } else { "0" }
-
-                $vTemplate = $config.autoupdate.version_format
-
-                # 开始替换
-                $manifestVersion = $vTemplate -replace '\$url[Vv]ersion', $urlVersion
-                $manifestVersion = $manifestVersion -replace '\$url[Mm]ajor', $uMajor -replace '\$url[Mm]inor', $uMinor -replace '\$url[Pp]atch', $uPatch -replace '\$url[Bb]uild', $uBuild
-                $manifestVersion = $manifestVersion -replace '\$pkg[Vv]ersion', $pkgBaseVersion
-                $manifestVersion = $manifestVersion -replace '\$pkg[Mm]ajor', $rMajor -replace '\$pkg[Mm]inor', $rMinor -replace '\$pkg[Pp]atch', $rPatch -replace '\$pkg[Bb]uild', $rBuild
-
-                # 兼容原有相对上下文变量
-                $manifestVersion = $manifestVersion -replace '\$version', $urlVersion
-                $manifestVersion = $manifestVersion -replace '\$major', $uMajor -replace '\$minor', $uMinor -replace '\$patch', $uPatch -replace '\$build', $uBuild
-
                 Write-Log "  Formatted manifest version using version_format: $manifestVersion"
             } elseif ($detectedVersion -and $detectedVersion -ne $version) {
-                # 如果没有配置 version_format 但检测到了不同的内置版本号，则直接使用内置版本号
-                $manifestVersion = $detectedVersion
                 Write-Log "  No version_format found, using raw installer built-in version: $manifestVersion"
             }
 
