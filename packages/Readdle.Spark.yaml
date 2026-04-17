@@ -9,3 +9,4 @@ autoupdate:
   version_format: $pkgMajor.$pkgMinor.$pkgPatch
   architecture:
     x64: https://downloads.sparkmailapp.com/Spark3/win/dist/$version/Spark.exe
+pr: https://github.com/microsoft/winget-pkgs/pull/361883
