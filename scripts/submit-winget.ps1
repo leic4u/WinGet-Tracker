@@ -58,6 +58,32 @@ function Update-PackageCurrentInfo {
     $yaml | Set-Content $filePath -Encoding UTF8
 }
 
+function Update-PackagePR {
+    param(
+        [string]$filePath,
+        [string]$prUrl
+    )
+
+    $yaml = Get-Content $filePath -Raw
+
+    # 匹配现有的 pr 字段（独立的顶级字段）
+    $prPattern = '(?m)^pr:.*\r?\n?'
+
+    if ($yaml -match $prPattern) {
+        # 替换现有的 pr 字段
+        $yaml = $yaml -replace $prPattern, "pr: $prUrl`n"
+    } else {
+        # 在文件末尾追加 pr 字段
+        if (-not $yaml.EndsWith("`n")) {
+            $yaml += "`n"
+        }
+        $yaml += "pr: $prUrl`n"
+    }
+
+    $yaml = $yaml.TrimEnd()
+    $yaml | Set-Content $filePath -Encoding UTF8
+}
+
 $hasFatalError = $false
 $updatesFile = "$PSScriptRoot/../updates.json"
 $logFile = "$PSScriptRoot/../logs/submit-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
@@ -114,14 +140,21 @@ foreach ($item in $updates) {
         # 第一步：使用 checkver 提取的版本号检查 PR 是否已存在
         # ========================================
         Write-Log "Step 1: Checking PR existence for $id $version (checkver version)"
-        $exists = Test-WingetPRExists $id $version
+        $prResult = Test-WingetPRExists $id $version
+        $exists = if ($prResult -is [PSCustomObject] -and $prResult.Exists) { $true } else { [bool]$prResult }
         $shouldSubmit = -not $exists
         $skipDownload = $false
         $manifestVersion = $version
+        $prUrl = $null  # 用于记录 PR URL
 
         if ($exists) {
             Write-Log "  PR already exists for $id $version, skipping download"
             $skipDownload = $true
+            # 记录已存在 PR 的 URL
+            if ($prResult -is [PSCustomObject] -and $prResult.Url) {
+                $prUrl = $prResult.Url
+                Write-Log "  Existing PR URL: $prUrl"
+            }
         }
 
         # ========================================
@@ -257,9 +290,15 @@ foreach ($item in $updates) {
                 $versionReplaced = $true
                 Write-Log "Step 3: Re-checking PR existence with installer version $manifestVersion"
                 $existsWithNewVersion = Test-WingetPRExists $id $manifestVersion
-                if ($existsWithNewVersion) {
+                $existsNew = if ($existsWithNewVersion -is [PSCustomObject] -and $existsWithNewVersion.Exists) { $true } else { [bool]$existsWithNewVersion }
+                if ($existsNew) {
                     Write-Log "  PR already exists for $id $manifestVersion, skipping submission"
                     $shouldSubmit = $false
+                    # 记录已存在 PR 的 URL
+                    if ($existsWithNewVersion -is [PSCustomObject] -and $existsWithNewVersion.Url) {
+                        $prUrl = $existsWithNewVersion.Url
+                        Write-Log "  Existing PR URL: $prUrl"
+                    }
                 }
             }
         }
@@ -316,24 +355,57 @@ foreach ($item in $updates) {
                         $submitSuccess = $true
                         Write-Log "  Successfully submitted $id $manifestVersion"
 
+                        # 查找刚提交的 PR 并获取其 URL
+                        try {
+                            $env:GH_TOKEN = $env:WINGET_TOKEN
+                            $searchQuery = "$id $manifestVersion"
+                            $prsJson = gh pr list `
+                                --repo microsoft/winget-pkgs `
+                                --state open `
+                                --search "$searchQuery" `
+                                --author "@me" `
+                                --json number,title,url `
+                                2>&1
+                            $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+                            if ($prs -and $prs.Count -gt 0) {
+                                $submittedPr = $prs[0]
+                                $prUrl = "https://github.com/microsoft/winget-pkgs/pull/$($submittedPr.number)"
+                                Write-Log "  Submitted PR URL: $prUrl"
+                            } else {
+                                Write-Log "  Warning: Could not find the submitted PR URL"
+                            }
+                        } catch {
+                            Write-Log "  Warning: Failed to retrieve submitted PR URL: $_"
+                        }
+
                         # 如果版本号被替换，修改 PR 标题以包含 URL 版本号
                         if ($versionReplaced) {
                             Write-Log "  Updating PR title to include URL version..."
                             try {
                                 $env:GH_TOKEN = $env:WINGET_TOKEN
-                                $searchQuery = "$id $manifestVersion"
-                                $prsJson = gh pr list `
-                                    --repo microsoft/winget-pkgs `
-                                    --state open `
-                                    --search "$searchQuery" `
-                                    --author "@me" `
-                                    --json number, title `
-                                    2>&1
-                                $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-                                if ($prs -and $prs.Count -gt 0) {
-                                    $pr = $prs[0]
-                                    $newTitle = "$($pr.title) ($version)"
-                                    gh pr edit $pr.number `
+                                # 复用之前已查询到的 PR 信息
+                                if ($submittedPr) {
+                                    $prNumber = $submittedPr.number
+                                    $prTitle = $submittedPr.title
+                                } else {
+                                    # 回退：重新搜索 PR
+                                    $searchQuery = "$id $manifestVersion"
+                                    $prsJson = gh pr list `
+                                        --repo microsoft/winget-pkgs `
+                                        --state open `
+                                        --search "$searchQuery" `
+                                        --author "@me" `
+                                        --json number,title `
+                                        2>&1
+                                    $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                    if ($prs -and $prs.Count -gt 0) {
+                                        $prNumber = $prs[0].number
+                                        $prTitle = $prs[0].title
+                                    }
+                                }
+                                if ($prNumber) {
+                                    $newTitle = "$prTitle ($version)"
+                                    gh pr edit $prNumber `
                                         --repo microsoft/winget-pkgs `
                                         --title "$newTitle" `
                                         2>&1
@@ -380,7 +452,14 @@ foreach ($item in $updates) {
             Write-Log "Step 5: Updating current_package in $file"
             try {
                 Update-PackageCurrentInfo -filePath $file -version $manifestVersion -downloads $processedDownloads
-                Write-Log "  Successfully updated current_package"
+
+                # 更新 PR URL 到 YAML 文件
+                if ($prUrl) {
+                    Update-PackagePR -filePath $file -prUrl $prUrl
+                    Write-Log "  Successfully updated current_package and pr URL"
+                } else {
+                    Write-Log "  Successfully updated current_package"
+                }
 
                 # 提交并推送更改到 GitHub 仓库
                 Write-Log "  Committing changes to GitHub..."
