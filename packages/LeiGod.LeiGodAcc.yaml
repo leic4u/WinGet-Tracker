@@ -1,10 +1,10 @@
 id: LeiGod.LeiGodAcc
 current_package:
-  version: "11.3.1.6"
+  version: "11.3.1.7"
   architecture:
     x86:
-      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.1.6.exe
-      hash: DBC1249D067E42571B89C2F1700900B2662A4DAD9055597D33A2C598347BFA60
+      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.1.7.exe
+      hash: 37E17C82837B530B8AD5985579DE3DA4723447C061031812F63CCBF7BA9EE882
 checkver:
   url: https://secapiv11.leigod.com/tools/version/list?size=20
   method: GET
