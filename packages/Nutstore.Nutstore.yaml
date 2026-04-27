@@ -1,16 +1,16 @@
 id: Nutstore.Nutstore
 current_package:
-  version: "7.2.11"
+  version: "7.2.12"
   architecture:
-    x86:
-      url: https://pkg-cdn.jianguoyun.com/static/exe/installer/7.2.11/NutstoreWindowsWPF_Full_7.2.11.exe
-      hash: 937B3EB61852C474142A806E6BAE9791A3336F89BBDDC36C5D9B32475B452237
     arm64:
-      url: https://pkg-cdn.jianguoyun.com/static/exe/installer/7.2.11/NutstoreWindowsWPF_Full_7.2.11_ARM64.exe
-      hash: 6C4C1F7E8FDF3696B02CF94702F0C4636438C43E8D10568383E4DF59465D0F0B
+      url: https://pkg-cdn.jianguoyun.com/static/exe/installer/7.2.12/NutstoreWindowsWPF_Full_7.2.12_ARM64.exe
+      hash: 7A4F7F15D8DBADA2FA7DD33954C9931FFFC30927ED4AEDBA943E88BCED081F62
     x64:
-      url: https://pkg-cdn.jianguoyun.com/static/exe/installer/7.2.11/NutstoreWindowsWPF_Full_7.2.11.exe
-      hash: 937B3EB61852C474142A806E6BAE9791A3336F89BBDDC36C5D9B32475B452237
+      url: https://pkg-cdn.jianguoyun.com/static/exe/installer/7.2.12/NutstoreWindowsWPF_Full_7.2.12.exe
+      hash: 30B1B923255DAA021ECCBC376EF9F10A75F69D9D780F49A939E2D32A8EAE780F
+    x86:
+      url: https://pkg-cdn.jianguoyun.com/static/exe/installer/7.2.12/NutstoreWindowsWPF_Full_7.2.12.exe
+      hash: 30B1B923255DAA021ECCBC376EF9F10A75F69D9D780F49A939E2D32A8EAE780F
 checkver:
   url: https://help.jianguoyun.com/?p=1415
   regex: WPF(\d+\.\d+\.\d+)
