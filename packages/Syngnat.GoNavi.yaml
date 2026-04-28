@@ -1,0 +1,17 @@
+id: Syngnat.GoNavi
+current_package:
+  version: "0.6.8"
+  architecture:
+    x64:
+      url: 
+      hash: 
+    arm64:
+      url: 
+      hash: 
+checkver:
+  url: "https://github.com/Syngnat/GoNavi"
+autoupdate:
+  version_format: $version
+  architecture:
+    x64: https://github.com/Syngnat/GoNavi/releases/download/v0.6.8/GoNavi-0.6.8-Windows-Amd64.exe
+    arm64: https://github.com/Syngnat/GoNavi/releases/download/v0.6.8/GoNavi-0.6.8-Windows-Arm64.exe
