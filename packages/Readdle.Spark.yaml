@@ -1,10 +1,7 @@
 id: Readdle.Spark
 current_package:
-  version: "3.28.6"
+  version: "3.28.7"
   architecture:
-    x64:
-      url: https://downloads.sparkmailapp.com/Spark3/win/dist/3.28.6.138292/Spark.exe
-      hash: FA6E8959C63FA9675D0B6BBC23C560AD24AC49699F624DED32F47C2219E3A959
 checkver:
   url: https://downloads.sparkmailapp.com/Spark3/win/dist/appcast.xml
   regex: Version (\d+\.\d+\.\d+\.\d+)
@@ -12,4 +9,4 @@ autoupdate:
   version_format: $pkgMajor.$pkgMinor.$pkgPatch
   architecture:
     x64: https://downloads.sparkmailapp.com/Spark3/win/dist/$version/Spark.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/363444
+pr: https://github.com/microsoft/winget-pkgs/pull/366957
