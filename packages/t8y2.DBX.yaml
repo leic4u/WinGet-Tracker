@@ -1,0 +1,11 @@
+id: t8y2.DBX
+current_package:
+  version: 0.3.9
+  architecture:
+
+checkver:
+  url: "https://github.com/t8y2/dbx"
+autoupdate:
+  version_format: $version
+  architecture:
+    x64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_x64-setup.exe
