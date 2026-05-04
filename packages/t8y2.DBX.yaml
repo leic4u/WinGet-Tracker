@@ -1,6 +1,6 @@
 id: t8y2.DBX
 current_package:
-  version: 0.3.9
+  version: "0.4.0"
   architecture:
 
 checkver:
@@ -9,3 +9,4 @@ autoupdate:
   version_format: $version
   architecture:
     x64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_x64-setup.exe
+pr: https://github.com/microsoft/winget-pkgs/pull/368601
