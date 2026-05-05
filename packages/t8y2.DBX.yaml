@@ -1,7 +1,10 @@
 id: t8y2.DBX
 current_package:
-  version: "0.4.0"
+  version: "0.4.1"
   architecture:
+    x64:
+      url: https://github.com/t8y2/dbx/releases/download/v0.4.1/DBX_0.4.1_x64-setup.exe
+      hash: F676817ACB1FCC4B2119480AA4DFBDB3FA94AB55B549E108EA854BA77D059BC3
 
 checkver:
   url: "https://github.com/t8y2/dbx"
