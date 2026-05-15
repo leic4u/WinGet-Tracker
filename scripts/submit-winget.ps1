@@ -367,27 +367,34 @@ foreach ($item in $updates) {
                         $submitSuccess = $true
                         Write-Log "  Successfully submitted $id $manifestVersion"
 
-                        # 查找刚提交的 PR 并获取其 URL
-                        try {
-                            $env:GH_TOKEN = $env:WINGET_TOKEN
-                            $searchQuery = "$id $manifestVersion"
-                            $prsJson = gh pr list `
-                                --repo microsoft/winget-pkgs `
-                                --state open `
-                                --search "$searchQuery" `
-                                --author "@me" `
-                                --json number,title,url `
-                                2>&1
-                            $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-                            if ($prs -and $prs.Count -gt 0) {
-                                $submittedPr = $prs[0]
-                                $prUrl = "https://github.com/microsoft/winget-pkgs/pull/$($submittedPr.number)"
-                                Write-Log "  Submitted PR URL: $prUrl"
-                            } else {
-                                Write-Log "  Warning: Could not find the submitted PR URL"
+                        # 优先使用 komac 输出中直接提供的 PR URL，这是当前脚本提交的 PR，最准确
+                        $prUrlMatch = [regex]::Match($outputStr, 'https://github\.com/microsoft/winget-pkgs/pull/\d+')
+                        if ($prUrlMatch.Success) {
+                            $prUrl = $prUrlMatch.Value
+                            Write-Log "  Submitted PR URL from komac output: $prUrl"
+                        } else {
+                            # 回退：查找刚提交的 PR 并获取其 URL
+                            try {
+                                $env:GH_TOKEN = $env:WINGET_TOKEN
+                                $searchQuery = "$id $manifestVersion"
+                                $prsJson = gh pr list `
+                                    --repo microsoft/winget-pkgs `
+                                    --state open `
+                                    --search "$searchQuery" `
+                                    --author "@me" `
+                                    --json number,title,url `
+                                    2>&1
+                                $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                if ($prs -and $prs.Count -gt 0) {
+                                    $submittedPr = $prs[0]
+                                    $prUrl = if ($submittedPr.url) { $submittedPr.url } else { "https://github.com/microsoft/winget-pkgs/pull/$($submittedPr.number)" }
+                                    Write-Log "  Submitted PR URL from gh search: $prUrl"
+                                } else {
+                                    Write-Log "  Warning: Could not find the submitted PR URL"
+                                }
+                            } catch {
+                                Write-Log "  Warning: Failed to retrieve submitted PR URL: $_"
                             }
-                        } catch {
-                            Write-Log "  Warning: Failed to retrieve submitted PR URL: $_"
                         }
 
                         # 如果版本号被替换，修改 PR 标题以包含 URL 版本号
@@ -399,6 +406,20 @@ foreach ($item in $updates) {
                                 if ($submittedPr) {
                                     $prNumber = $submittedPr.number
                                     $prTitle = $submittedPr.title
+                                } elseif ($prUrl) {
+                                    # 如果 PR 是本脚本刚提交的，直接使用 komac 输出中的 PR URL 定位 PR
+                                    $prNumberMatch = [regex]::Match($prUrl, 'github\.com/microsoft/winget-pkgs/pull/(\d+)')
+                                    if ($prNumberMatch.Success) {
+                                        $prNumber = $prNumberMatch.Groups[1].Value
+                                        $prJson = gh pr view $prNumber `
+                                            --repo microsoft/winget-pkgs `
+                                            --json title `
+                                            2>&1
+                                        $prInfo = $prJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                        if ($prInfo -and $prInfo.title) {
+                                            $prTitle = $prInfo.title
+                                        }
+                                    }
                                 } else {
                                     # 回退：重新搜索 PR
                                     $searchQuery = "$id $manifestVersion"
@@ -415,13 +436,17 @@ foreach ($item in $updates) {
                                         $prTitle = $prs[0].title
                                     }
                                 }
-                                if ($prNumber) {
-                                    $newTitle = "$prTitle ($version)"
-                                    gh pr edit $prNumber `
-                                        --repo microsoft/winget-pkgs `
-                                        --title "$newTitle" `
-                                        2>&1
-                                    Write-Log "  PR title updated to: $newTitle"
+                                if ($prNumber -and $prTitle) {
+                                    if ($prTitle.EndsWith("($version)")) {
+                                        Write-Log "  PR title already includes URL version: $prTitle"
+                                    } else {
+                                        $newTitle = "$prTitle ($version)"
+                                        gh pr edit $prNumber `
+                                            --repo microsoft/winget-pkgs `
+                                            --title "$newTitle" `
+                                            2>&1
+                                        Write-Log "  PR title updated to: $newTitle"
+                                    }
                                 } else {
                                     Write-Log "  Warning: Could not find the submitted PR to update title"
                                 }
