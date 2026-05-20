@@ -1,10 +1,10 @@
 id: ClashVergeRev.ClashVergeRev
 current_package:
-  version: "2.5.0"
+  version: "2.5.1"
   architecture:
 checkver:
   url: "https://github.com/clash-verge-rev/clash-verge-rev"
 autoupdate:
   architecture:
     x64: https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v$version/Clash.Verge_$version_x64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/376272
+pr: https://github.com/microsoft/winget-pkgs/pull/377042
