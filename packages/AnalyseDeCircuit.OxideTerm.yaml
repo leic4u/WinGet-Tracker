@@ -1,0 +1,16 @@
+id: AnalyseDeCircuit.OxideTerm
+current_package:
+  version: "1.5.3"
+  architecture:
+    x64:
+      url: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v1.5.3/OxideTerm_1.5.3_windows_x64-setup.exe
+      hash: 280494A36BD4C40562FDD5394D176716C4092424CFFE9822501BB152CEC0080B
+    arm64:
+      url: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v1.5.3/OxideTerm_1.5.3_windows_arm64-setup.exe
+      hash: 40D4FD21AF882CCBA2F5D98F654AA1F396061975EF92C848F994F89A05AE8BDA
+checkver:
+  url: "https://github.com/AnalyseDeCircuit/oxideterm"
+autoupdate:
+  architecture:
+    x64: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v$version/OxideTerm_$version_windows_x64-setup.exe
+    arm64: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v$version/OxideTerm_$version_windows_arm64-setup.exe
