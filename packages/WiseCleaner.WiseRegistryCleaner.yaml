@@ -1,10 +1,10 @@
 id: WiseCleaner.WiseRegistryCleaner
 current_package:
-  version: "11.3.2"
+  version: "11.3.3"
   architecture:
     x86:
-      url: https://downloads.wisecleaner.com/soft/WRCFree_11.3.2.734.exe
-      hash: 5E01D1221CF109FC760948FA7E8D0335AD924AF2B3018F73F7552C5F4DB8AA3D
+      url: https://downloads.wisecleaner.com/soft/WRCFree_11.3.3.735.exe
+      hash: D2B36E6A5314CA79E45F5451F990BFB1FAA7D4CB6B11249C6CF884C821C686CC
 checkver:
   url: https://www.wisecleaner.com/software_update/getinfo_v6.php?p_id=5
   regex: WRCFree_(\d+\.\d+\.\d+\.\d+)
@@ -12,3 +12,4 @@ autoupdate:
   version_format: $pkgMajor.$pkgMinor.$pkgPatch
   architecture:
     x86: https://downloads.wisecleaner.com/soft/WRCFree_$major.$minor.$patch.$build.exe
+pr: https://github.com/microsoft/winget-pkgs/pull/387984
