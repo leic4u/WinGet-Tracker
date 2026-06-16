@@ -2,7 +2,7 @@ id: ChinaMobile.CMCCProxy
 current_package:
   version: "5.16.0"
   architecture:
-    x86:
+    x64:
       url: https://aifast.komect.com/portal/pc/downloadPcClient/1831789752093970541
       hash: 29AE97FDEE252832D185F6B0E52F13A9D775F97ACEE71030C7E573772887F9B7
 checkver:
