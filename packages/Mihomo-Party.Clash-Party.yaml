@@ -1,16 +1,16 @@
 id: Mihomo-Party.Clash-Party
 current_package:
-  version: "1.9.5"
+  version: "1.9.6"
   architecture:
-    x64:
-      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.5/clash-party-windows-1.9.5-x64-setup.exe
-      hash: C1E349A4A199720499D4047C829F662D23ACB2DCBECE7F97AB5A219516FDA9B3
-    arm64:
-      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.5/clash-party-windows-1.9.5-arm64-setup.exe
-      hash: E3B7C626224F28E087CC42CD9CB880C0F879D3DEEB7EF4F2BB4812291FA4C8E2
     x86:
-      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.5/clash-party-windows-1.9.5-ia32-setup.exe
-      hash: 48B3DF98AE807390030C2BFD28034BE97D4E05B9CBD8E2C015E5C8DC6FE0A3A9
+      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.6/clash-party-windows-1.9.6-ia32-setup.exe
+      hash: 9B62EA580635178BA10055E3EFC99933EE5B6224A2DBFBE6A32D9E8E382B5762
+    arm64:
+      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.6/clash-party-windows-1.9.6-arm64-setup.exe
+      hash: 3D6FA943CD5339966F9422AF2C8F756DBE6A32F34F6B28416F345153EA9DF171
+    x64:
+      url: https://github.com/mihomo-party-org/clash-party/releases/download/v1.9.6/clash-party-windows-1.9.6-x64-setup.exe
+      hash: D054B4C41824A1CCB0A994782F1EAF06A3DC900B2D5341EF870C22A931138BD3
 checkver:
   url: "https://github.com/mihomo-party-org/clash-party"
 autoupdate:
@@ -18,3 +18,4 @@ autoupdate:
     x64: https://github.com/mihomo-party-org/clash-party/releases/download/v$version/clash-party-windows-$version-x64-setup.exe
     x86: https://github.com/mihomo-party-org/clash-party/releases/download/v$version/clash-party-windows-$version-ia32-setup.exe
     arm64: https://github.com/mihomo-party-org/clash-party/releases/download/v$version/clash-party-windows-$version-arm64-setup.exe
+pr: https://github.com/microsoft/winget-pkgs/pull/391244
