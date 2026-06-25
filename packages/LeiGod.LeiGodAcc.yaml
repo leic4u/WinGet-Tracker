@@ -1,10 +1,10 @@
 id: LeiGod.LeiGodAcc
 current_package:
-  version: "11.3.2.1"
+  version: "11.3.2.2"
   architecture:
     x86:
-      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.2.1.exe
-      hash: A653FA035E8E66649975B2578E69E8F8E40A871D853C03700E95FBBBC055750A
+      url: https://update.leigod.com/soft/leigod/win/11.0.0.0/LeiGodSetup.11.3.2.2.exe
+      hash: E1B9F43C0BA75825581B961BDF71425B02D4BB91BAE06F36966591AABE8CACFC
 checkver:
   url: https://secapiv11.leigod.com/tools/version/list?size=20
   method: GET
@@ -15,4 +15,4 @@ checkver:
 autoupdate:
   architecture:
     x86: https://update.leigod.com/soft/leigod/win/$major.0.0.0/LeiGodSetup.$version.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/388378
+pr: https://github.com/microsoft/winget-pkgs/pull/392844
