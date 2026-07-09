@@ -1,10 +1,10 @@
 id: GamePP.GamePPLite
 current_package:
-  version: "6.1.151.622"
+  version: "6.1.165.708"
   architecture:
     x86:
-      url: https://dllite.gamepp.com/checkupdate/update/Setup_6.1.151.622.exe
-      hash: C1FBB9E55CB4B57ABE81DEB3D02CEF733E506A8EF4A00130669026BAA6FE6D22
+      url: https://dllite.gamepp.com/checkupdate/update/Setup_6.1.165.708.exe
+      hash: E9E0BD63C2F22AB7113FB6EBBB8CE5AE1E2FA5DF7E7504147867C314D99D80DE
 checkver:
   url: https://liveupdate-lite.gamepp.com/checkupdate/updatelite.php?version=0&m=2
   jsonpath: "data.version"
@@ -12,4 +12,4 @@ autoupdate:
   architecture:
     x86: 
       jsonpath: "data.list.url"
-pr: https://github.com/microsoft/winget-pkgs/pull/391821
+pr: https://github.com/microsoft/winget-pkgs/pull/399841
