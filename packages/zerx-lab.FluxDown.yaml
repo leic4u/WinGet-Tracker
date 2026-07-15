@@ -1,13 +1,13 @@
 id: zerx-lab.FluxDown
 current_package:
-  version: "0.2.0"
+  version: "0.2.1"
   architecture:
-    x64:
-      url: https://github.com/zerx-lab/FluxDown/releases/download/v0.2.0/FluxDown-0.2.0-windows-x64-setup.exe
-      hash: 013C1C37C0E8CF40DD735E8466FB506F3B9247454C6A79ACFBEF0A0C45CCCC50
     arm64:
-      url: https://github.com/zerx-lab/FluxDown/releases/download/v0.2.0/FluxDown-0.2.0-windows-arm64-setup.exe
-      hash: 2FC0C1B332E44E432907A3E4C5E1F05C6E2F2A20021B5833DF3C99804BCCA42F
+      url: https://github.com/zerx-lab/FluxDown/releases/download/v0.2.1/FluxDown-0.2.1-windows-arm64-setup.exe
+      hash: AC7F8CF4067AC34368C703D5C2B8DCBE7239B65C9AF620B1C21E5ECD5AD417BF
+    x64:
+      url: https://github.com/zerx-lab/FluxDown/releases/download/v0.2.1/FluxDown-0.2.1-windows-x64-setup.exe
+      hash: EB116E4F022D73AA607CD2C5DFCA1B165AB1FA7730BC0EFE8D288602FD514795
 checkver:
   url: "https://github.com/zerx-lab/FluxDown"
 autoupdate:
