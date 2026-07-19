@@ -1,13 +1,7 @@
 id: nilaoda.N_m3u8DL-RE
 current_package:
-  version: "0.6.0-beta"
+  version: "127.0.0.1"
   architecture:
-    x64:
-      url: https://github.com/nilaoda/N_m3u8DL-RE/releases/download/v0.6.0-beta/N_m3u8DL-RE_v0.6.0-beta_win-x64_20260629.zip
-      hash: 3825FD42EE502F98A9378F6FDDDB2F7822709F521806214F466DB6935C950F1A
-    arm64:
-      url: https://github.com/nilaoda/N_m3u8DL-RE/releases/download/v0.6.0-beta/N_m3u8DL-RE_v0.6.0-beta_win-arm64_20260629.zip
-      hash: 3A13527812A5F18B9981B3CD6F7F36BD17CD7D76B5F3273281A58354E5FCEBD6
 checkver:
   url: "https://github.com/nilaoda/N_m3u8DL-RE"
 autoupdate:
