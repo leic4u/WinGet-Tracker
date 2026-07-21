@@ -121,53 +121,6 @@ $env:WINGET_TOKEN="your_github_personal_access_token"
 └──────────────────────┘
 ```
 
-## 配置文件格式
-
-每个软件包需要一个 YAML 配置文件，放置在 `packages/` 目录下：
-
-```yaml
-id: Publisher.AppName
-current_package:
-  version: "1.0.0"
-  architecture:
-    x64:
-      url: https://example.com/app-1.0.0-x64.exe
-      hash: "SHA256_HASH"
-checkver:
-  url: https://example.com/releases
-  regex: Version ([\d.]+)
-autoupdate:
-  version_format: $pkgMajor.$pkgMinor.$pkgPatch  # 可选，用于格式化 manifest 版本
-  architecture:
-    # 方式1: URL 模板（纯字符串，支持 $version 等变量替换）
-    x64: https://example.com/app-$version-x64.exe
-    # 方式2: jsonpath（从 API JSON 提取 URL）
-    # x86:
-    #   jsonpath: data.list.url
-    # 方式3: match_url（从 GitHub Release assets 按文件名匹配）🆕
-    # arm64:
-    #   match_url: win-arm64
-```
-
-### 主要配置字段
-
-| 字段 | 说明 |
-|------|------|
-| `id` | Winget 包标识符（格式：Publisher.AppName） |
-| `current_package.version` | 当前已知的最新版本 |
-| `current_package.architecture` | 支持的架构及对应的下载信息，会自动更新 |
-| `checkver.url` | [GitHub/API/Web] 版本检查的目标 URL |
-| `checkver.regex` | [GitHub/API/Web] 从页面提取版本的正则表达式 |
-| `checkver.method` | [API] HTTP 请求方法（GET/POST/PUT，默认 GET） |
-| `checkver.headers` | [API] 自定义 HTTP 请求头 |
-| `checkver.body` | [API] POST/PUT 请求体 |
-| `checkver.jsonpath` | [API] 从 JSON 响应提取版本的路径，支持遍历数组 |
-| `checkver.exclude_pattern` | [API] 可选，排除匹配的版本 |
-| `autoupdate.version_format` | 可选，自定义 manifest 版本的格式 |
-| `autoupdate.architecture.[x86/x64/arm64]` | 自动更新的下载 URL 模板 |
-| `autoupdate.architecture.[x86/x64/arm64].jsonpath` | 可选，从 checkver 数据提取下载 URL，支持遍历数组 |
-| `autoupdate.architecture.[x86/x64/arm64].match_url` | 可选，从 GitHub Release assets 按文件名正则匹配下载 URL |
-
 ## 版本检查模式
 
 ### 1. GitHub Releases
@@ -195,22 +148,6 @@ checkver:
 ```
 从 JSON API 响应提取版本号。
 
-### 4. GitHub Releases + Asset 匹配（match_url）🆕
-
-当 GitHub Release 的下载文件名包含日期等不可预知部分时，可使用 `match_url` 从 assets 数组中按正则匹配文件名，直接获取 `browser_download_url`。
-
-```yaml
-checkver:
-  url: https://github.com/nilaoda/N_m3u8DL-RE
-autoupdate:
-  architecture:
-    x64:
-      match_url: win-x64
-    arm64:
-      match_url: win-arm64
-```
-
-> **注意**: `match_url` 依赖 GitHub API 返回的 assets 数据，因此 `checkver.url` 必须是 GitHub 仓库地址（`https://github.com/owner/repo`），不能是其他 URL。
 
 ## 版本号变量
 
@@ -228,6 +165,55 @@ autoupdate:
 
 ### 安装包版本变量 ($pkg*)
 从安装包提取的版本，支持全小写和驼峰式两种格式（`$pkgversion` 或 `$pkgVersion`）。
+
+## 完整配置文件格式
+
+每个软件包需要一个 YAML 配置文件，放置在 `packages/` 目录下：
+
+```yaml
+id: Publisher.AppName
+current_package:
+  version: "1.0.0"
+  architecture:
+    x64:
+      url: https://example.com/app-1.0.0-x64.exe
+      hash: "SHA256_HASH"
+checkver:
+  url: https://example.com/releases
+  regex: Version ([\d.]+)
+autoupdate:
+  version_format: $pkgMajor.$pkgMinor.$pkgPatch  # 可选，用于格式化 manifest 版本
+  architecture:
+    # 方式1: URL 模板（纯字符串，支持 $version 等变量替换）
+    x64: https://example.com/app-$version-x64.exe
+    # 方式2: jsonpath（从 API JSON 提取 URL）
+    # x86:
+    #   jsonpath: data.list.url
+    # 方式3: match_url（从 GitHub Release assets 按文件名匹配）🆕
+    # arm64:
+    #   match_url: win-arm64
+```
+
+> **注意**: `match_url` 依赖 GitHub API 返回的 assets 数据，因此 `checkver.url` 必须是 GitHub 仓库地址（`https://github.com/owner/repo`），不能是其他 URL。
+
+### 主要配置字段
+
+| 字段 | 说明 |
+|------|------|
+| `id` | Winget 包标识符（格式：Publisher.AppName） |
+| `current_package.version` | 当前已知的最新版本 |
+| `current_package.architecture` | 支持的架构及对应的下载信息，会自动更新 |
+| `checkver.url` | [GitHub/API/Web] 版本检查的目标 URL |
+| `checkver.regex` | [GitHub/API/Web] 从页面提取版本的正则表达式 |
+| `checkver.method` | [API] HTTP 请求方法（GET/POST/PUT，默认 GET） |
+| `checkver.headers` | [API] 自定义 HTTP 请求头 |
+| `checkver.body` | [API] POST/PUT 请求体 |
+| `checkver.jsonpath` | [API] 从 JSON 响应提取版本的路径，支持遍历数组 |
+| `checkver.exclude_pattern` | [API] 可选，排除匹配的版本 |
+| `autoupdate.version_format` | 可选，自定义 manifest 版本的格式 |
+| `autoupdate.architecture.[x86/x64/arm64]` | 自动更新的下载 URL 模板 |
+| `autoupdate.architecture.[x86/x64/arm64].jsonpath` | [API] 可选，从 checkver 数据提取下载 URL，支持遍历数组 |
+| `autoupdate.architecture.[x86/x64/arm64].match_url` | [GitHub] 可选，从 GitHub Release assets 按文件名正则匹配下载 URL |
 
 ## PR 提交说明
 
