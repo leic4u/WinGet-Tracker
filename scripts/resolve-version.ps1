@@ -22,15 +22,20 @@ function Resolve-Version($config) {
 
             $release = Invoke-RestMethod $apiUrl -Headers $headers -ErrorAction Stop
 
+            $version = $null
             if ($release.tag_name) {
                 $version = $release.tag_name -replace '^[vV]', ''
-                Write-Host "  Found version from GitHub API: $version"
-                return $version
-            }
-            if ($release.name) {
+            } elseif ($release.name) {
                 $version = $release.name -replace '^[vV]', ''
+            }
+
+            if ($version) {
                 Write-Host "  Found version from GitHub API: $version"
-                return $version
+                return [PSCustomObject]@{
+                    Version    = $version
+                    UrlVersion = $version
+                    Data       = $release
+                }
             }
 
             Write-Warning "  Could not extract version from GitHub API response"

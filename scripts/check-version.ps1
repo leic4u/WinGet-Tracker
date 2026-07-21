@@ -200,9 +200,10 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                             $arch = $rUrl.arch
                             $template = $config.autoupdate.architecture.$arch
                             $templateUrl = if ($template -is [string]) { $template } else { $template.url }
-                            
-                            # 检查通用版本变量
-                            if ($templateUrl -match '\$(version|major|minor|patch|build|url[Vv]ersion|url[Mm]ajor|url[Mm]inor|url[Pp]atch|url[Bb]uild)') {
+                            $isMatchUrlTemplate = ($template -is [System.Collections.IDictionary] -and $template.match_url)
+
+                            # 检查通用版本变量，或 match_url 匹配类模板
+                            if ($isMatchUrlTemplate -or $templateUrl -match '\$(version|major|minor|patch|build|url[Vv]ersion|url[Mm]ajor|url[Mm]inor|url[Pp]atch|url[Bb]uild)') {
                                 $hasVariables = $true
                                 # 保护架构属性访问的安全措施
                                 $currentArch = if ($config.current_package.architecture -is [System.Collections.IDictionary]) { $config.current_package.architecture[$arch] } else { $config.current_package.architecture.$arch }

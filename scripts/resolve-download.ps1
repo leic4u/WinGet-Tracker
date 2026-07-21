@@ -15,6 +15,12 @@ function Resolve-Download($config, $version, $urlVersion = $null, $checkverData 
 
     $urls = @()
 
+    # 预处理 checkverData 中的 assets 数组（用于 match_url 匹配）
+    $assets = @()
+    if ($checkverData -and $checkverData.assets) {
+        $assets = @($checkverData.assets)
+    }
+
     foreach ($arch in $config.autoupdate.architecture.Keys) {
         $template = $config.autoupdate.architecture[$arch]
         $templateUrl = $null
@@ -89,6 +95,20 @@ function Resolve-Download($config, $version, $urlVersion = $null, $checkverData 
                 }
             } else {
                 Write-Warning "jsonpath specified for architecture $arch but no checkver data available"
+            }
+        } elseif ($template -is [System.Collections.IDictionary] -and $template.match_url) {
+            # 按正则匹配 assets 数组中的文件名，获取 browser_download_url
+            $matchPattern = $template.match_url
+            if ($assets.Count -gt 0) {
+                $matchedAsset = $assets | Where-Object { $_.name -match $matchPattern } | Select-Object -First 1
+                if ($matchedAsset) {
+                    $templateUrl = $matchedAsset.browser_download_url
+                    Write-Host "  Matched asset '$($matchedAsset.name)' using match_url '$matchPattern'"
+                } else {
+                    Write-Warning "No asset matched match_url '$matchPattern' among $($assets.Count) assets"
+                }
+            } else {
+                Write-Warning "match_url specified for architecture $arch but no assets data available"
             }
         } else {
             $templateUrl = if ($template -is [string]) { $template } else { $template.url }

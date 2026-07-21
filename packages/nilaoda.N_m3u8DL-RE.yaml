@@ -1,11 +1,19 @@
 id: nilaoda.N_m3u8DL-RE
 current_package:
-  version: "127.0.0.1"
+  version: "0.5.0-beta"
   architecture:
+    arm64:
+      url: 
+      hash: 
+    x64:
+      url: 
+      hash:
 checkver:
   url: "https://github.com/nilaoda/N_m3u8DL-RE"
 autoupdate:
   architecture:
-    x64: https://github.com/nilaoda/N_m3u8DL-RE/releases/download/v$version/N_m3u8DL-RE_v$version_win-x64_20260629.zip
-    arm64: https://github.com/nilaoda/N_m3u8DL-RE/releases/download/v$version/N_m3u8DL-RE_v$version_win-arm64_20260629.zip
+    x64:
+      match_url: win-x64
+    arm64:
+      match_url: win-arm64
 pr: https://github.com/microsoft/winget-pkgs/pull/399493
