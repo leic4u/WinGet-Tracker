@@ -1,13 +1,7 @@
 id: nilaoda.N_m3u8DL-RE
 current_package:
-  version: "0.5.0-beta"
+  version: "0.6.0-beta"
   architecture:
-    arm64:
-      url: 
-      hash: 
-    x64:
-      url: 
-      hash:
 checkver:
   url: "https://github.com/nilaoda/N_m3u8DL-RE"
 autoupdate:
