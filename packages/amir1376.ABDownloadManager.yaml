@@ -1,7 +1,13 @@
 id: amir1376.ABDownloadManager
 current_package:
-  version: "1.10.0"
+  version: "1.10.1"
   architecture:
+    x64:
+      url: https://github.com/amir1376/ab-download-manager/releases/download/v1.10.1/ABDownloadManager_1.10.1_windows_x64.exe
+      hash: 2AC9412DE264369D1D548C307E38644BD82E5F8CFC73A180EF4BA0916EFAF03C
+    arm64:
+      url: https://github.com/amir1376/ab-download-manager/releases/download/v1.10.1/ABDownloadManager_1.10.1_windows_arm64.exe
+      hash: 0F78AC661A56AA4DDAC3FB18C774D9B22EFC93FE40B619AD2A55A1FA783C1F7C
 checkver:
   url: "https://github.com/amir1376/ab-download-manager"
 autoupdate:
@@ -9,4 +15,4 @@ autoupdate:
   architecture:
     x64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_x64.exe
     arm64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_arm64.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/407470
+pr: https://github.com/microsoft/winget-pkgs/pull/407537
