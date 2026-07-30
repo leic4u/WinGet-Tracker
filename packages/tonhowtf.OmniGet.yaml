@@ -1,13 +1,13 @@
 id: tonhowtf.OmniGet
 current_package:
-  version: "0.8.1"
+  version: "0.8.2"
   architecture:
     x64:
-      url: https://github.com/tonhowtf/omniget/releases/download/v0.8.1/omniget_0.8.1_x64-setup.exe
-      hash: 6A1AC76A65294CE5A327D584B0C609FFFFFDB3BC0EE8B0F26382DEA3B13E6A22
+      url: https://github.com/tonhowtf/omniget/releases/download/v0.8.2/omniget_0.8.2_x64-setup.exe
+      hash: 1D2C9DCCA98F062B19F8B00CC5CBB48AD947152F9D2EE58B8C24EE3ED8099953
 checkver:
   url: "https://github.com/tonhowtf/omniget"
 autoupdate:
   architecture:
     x64: https://github.com/tonhowtf/omniget/releases/download/v$version/omniget_$version_x64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/409712
+pr: https://github.com/microsoft/winget-pkgs/pull/410049
