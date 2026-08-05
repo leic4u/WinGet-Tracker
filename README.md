@@ -81,6 +81,7 @@ $env:WINGET_TOKEN="your_github_personal_access_token"
 
 - **触发方式**：根据 cron 表达式自动运行，或手动触发 (`workflow_dispatch`)
 - **所需 Secrets**：`WINGET_TOKEN`（GitHub Personal Access Token）
+- 自动同步上游 winget-pkgs 仓库的 Action 偶尔会失败，这时需要去自己 Fork 的 winget-pkgs 仓库手动同步一下
 
 ## 工作流程
 
