@@ -1,10 +1,10 @@
 id: ChinaMobile.CMCCProxy
 current_package:
-  version: "5.16.0"
+  version: "5.18.0"
   architecture:
-    x64:
-      url: https://aifast.komect.com/portal/pc/downloadPcClient/1831789752093970541
-      hash: 29AE97FDEE252832D185F6B0E52F13A9D775F97ACEE71030C7E573772887F9B7
+    x86:
+      url: https://aifast.komect.com/portal/pc/downloadPcClient/1852100238471585872
+      hash: 542BDC613E6A038C77D451E077C7AFAB520ABD2D64A59D7F4339FF618E9CF6CA
 checkver:
   url: https://aifast.komect.com/portal/education/pc/checkVersion
   method: POST
@@ -16,4 +16,4 @@ autoupdate:
   architecture:
     x86:
       jsonpath: data.descUrl
-pr: https://github.com/microsoft/winget-pkgs/pull/388379
+pr: https://github.com/microsoft/winget-pkgs/pull/413041
