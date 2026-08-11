@@ -1,7 +1,13 @@
 id: Coremail.CMClient
 current_package:
-  version: "4.2.3.1596"
+  version: "4.2.3.1608"
   architecture:
+    x86:
+      url: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_4.2.3-1608_amd32.exe
+      hash: E38FF473F39D5EF3871E3ADEA91158A515C811E07272E035480A6C4819E29E85
+    x64:
+      url: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_4.2.3-1608_amd64.exe
+      hash: 17FC4658F1E96072509354482BDD9096F61CF247D785E418B510EB09BBF87035
 checkver:
   url: https://betaweb.coremail.cn/adm_api/s/json?func=cim.common%3AcheckVersion
   method: POST
@@ -11,4 +17,4 @@ autoupdate:
   architecture:
     x86: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_$major.$minor.$patch-$build_amd32.exe
     x64: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_$major.$minor.$patch-$build_amd64.exe
-pr: 
+pr: https://github.com/microsoft/winget-pkgs/pull/415178
