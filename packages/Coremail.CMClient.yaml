@@ -1,0 +1,13 @@
+id: Coremail.CMClient
+current_package:
+  version: "4.2.3.1596"
+  architecture:
+checkver:
+  url: https://betaweb.coremail.cn/adm_api/s/json?func=cim.common%3AcheckVersion
+  body: '{"platform":"mail","customer_type":"standard","arch_type":"win32.exe"}'
+  jsonpath: var.latestVersion.version
+autoupdate:
+  architecture:
+    x86: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_$major.$minor.$patch-$build_amd32.exe
+    x64: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_$major.$minor.$patch-$build_amd64.exe
+pr: 
