@@ -4,6 +4,7 @@ current_package:
   architecture:
 checkver:
   url: https://betaweb.coremail.cn/adm_api/s/json?func=cim.common%3AcheckVersion
+  method: POST
   body: '{"platform":"mail","customer_type":"standard","arch_type":"win32.exe"}'
   jsonpath: var.latestVersion.version
 autoupdate:
