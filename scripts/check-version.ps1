@@ -207,15 +207,26 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                                 $hasVariables = $true
                                 # 保护架构属性访问的安全措施
                                 $currentArch = if ($config.current_package.architecture -is [System.Collections.IDictionary]) { $config.current_package.architecture[$arch] } else { $config.current_package.architecture.$arch }
-                                $currentUrl = if ($currentArch -is [System.Collections.IDictionary]) { $currentArch['url'] } else { $currentArch.url }
-                                
-                                if ($currentUrl) {
-                                    $checkedCount++
-                                    if ($rUrl.url -ne $currentUrl) {
-                                        $allMatch = $false
-                                        break
-                                    }
+                                $currentEntries = @()
+                                if ($currentArch -is [System.Collections.IEnumerable] -and -not ($currentArch -is [string]) -and -not ($currentArch -is [System.Collections.IDictionary])) {
+                                    $currentEntries = @($currentArch)
                                 } else {
+                                    $currentEntries = @($currentArch)
+                                }
+
+                                $matchedAny = $false
+                                foreach ($currentEntry in $currentEntries) {
+                                    $currentUrl = if ($currentEntry -is [System.Collections.IDictionary]) { $currentEntry['url'] } else { $currentEntry.url }
+                                    if ($currentUrl) {
+                                        $checkedCount++
+                                        if ($rUrl.url -eq $currentUrl) {
+                                            $matchedAny = $true
+                                            break
+                                        }
+                                    }
+                                }
+
+                                if (-not $matchedAny) {
                                     $allMatch = $false
                                     break
                                 }

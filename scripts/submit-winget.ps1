@@ -33,13 +33,16 @@ function Update-PackageCurrentInfo {
 
     # 构建并拼接新的 current_package 节点
     $replacement = "current_package:`n  version: `"$version`"`n  architecture:`n"
-    foreach ($d in $downloads) {
-        $replacement += "    $($d.arch):`n"
-        $replacement += "      url: $($d.url)`n"
-        if ($d.hash) {
-            $replacement += "      hash: $($d.hash)`n"
-        } else {
-            $replacement += "      hash: `"`"`n"
+    $groupedDownloads = $downloads | Group-Object arch
+    foreach ($group in $groupedDownloads) {
+        $replacement += "    $($group.Name):`n"
+        foreach ($d in $group.Group) {
+            $replacement += "      - url: $($d.url)`n"
+            if ($d.hash) {
+                $replacement += "        hash: $($d.hash)`n"
+            } else {
+                $replacement += "        hash: `"`"`n"
+            }
         }
     }
 
