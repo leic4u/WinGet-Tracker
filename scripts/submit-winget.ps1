@@ -211,7 +211,8 @@ foreach ($item in $updates) {
 
             $downloads = Resolve-Download $config $version $urlVersion $checkverData
             if (-not $downloads -or $downloads.Count -eq 0) {
-                Write-Log "  Warning: No download URLs found"
+                Write-Log "  Error: No download URLs found"
+                $hasFatalError = $true
                 continue
             }
 
@@ -280,6 +281,7 @@ foreach ($item in $updates) {
 
             if ($processedDownloads.Count -eq 0) {
                 Write-Log "  Error: No valid downloads after hash calculation"
+                $hasFatalError = $true
                 continue
             }
 
