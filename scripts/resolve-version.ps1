@@ -5,24 +5,25 @@ function Resolve-Version($config) {
     # 自动处理 GitHub 仓库 URL
     $isGitHubRepo = $url -match '^https://github\.com/([^/]+)/([^/]+)/?$'
     if ($isGitHubRepo -and -not $config.checkver.jsonpath) {
-        # 转换为 GitHub API URL
         $owner = $matches[1]
         $repo = $matches[2]
+
+        $headers = @{
+            "Accept" = "application/vnd.github.v3+json"
+            "User-Agent" = "winget-tracker"
+        }
+        if ($env:WINGET_TOKEN) {
+            $headers["Authorization"] = "token $($env:WINGET_TOKEN)"
+        }
+
+        $version = $null
+        $release = $null
+
+        # 先尝试 GitHub release
         $apiUrl = "https://api.github.com/repos/$owner/$repo/releases/latest"
-        Write-Host "  Detected GitHub repository, using API: $apiUrl"
-
+        Write-Host "  Detected GitHub repository, using release API: $apiUrl"
         try {
-            $headers = @{
-                "Accept" = "application/vnd.github.v3+json"
-                "User-Agent" = "winget-tracker"
-            }
-            if ($env:WINGET_TOKEN) {
-                $headers["Authorization"] = "token $($env:WINGET_TOKEN)"
-            }
-
-            $release = Invoke-RestMethod $apiUrl -Headers $headers -ErrorAction Stop
-
-            $version = $null
+            $release = Invoke-RestMethod -Uri $apiUrl -Headers $headers -ErrorAction Stop
             if ($release.tag_name) {
                 $version = $release.tag_name -replace '^[vV]', ''
             } elseif ($release.name) {
@@ -30,7 +31,7 @@ function Resolve-Version($config) {
             }
 
             if ($version) {
-                Write-Host "  Found version from GitHub API: $version"
+                Write-Host "  Found version from GitHub release API: $version"
                 return [PSCustomObject]@{
                     Version    = $version
                     UrlVersion = $version
@@ -38,12 +39,49 @@ function Resolve-Version($config) {
                 }
             }
 
-            Write-Warning "  Could not extract version from GitHub API response"
-            return $null
+            Write-Warning "  Could not extract version from GitHub release API response"
         } catch {
-            Write-Warning "  Failed to fetch version from GitHub API: $_"
-            return $null
+            Write-Warning "  GitHub release API failed: $_"
         }
+
+        # release 不可用时尝试 GitHub tags
+        $tagsUrl = "https://api.github.com/repos/$owner/$repo/tags"
+        Write-Host "  Trying GitHub tags API: $tagsUrl"
+        try {
+            $tags = Invoke-RestMethod -Uri $tagsUrl -Headers $headers -ErrorAction Stop
+            if ($tags -and $tags.Count -gt 0) {
+                $tagVersions = @()
+                foreach ($tag in $tags) {
+                    if ($tag.name) {
+                        $tagName = $tag.name -replace '^[vV]', ''
+                        if ($tagName -match '^[0-9]+(\.[0-9]+)*(-[A-Za-z0-9]+)?$') {
+                            $tagVersions += $tagName
+                        }
+                    }
+                }
+
+                if ($tagVersions.Count -gt 0) {
+                    $version = $tagVersions | Sort-Object { [version]$_ } -Descending | Select-Object -First 1
+                } else {
+                    $version = ($tags[0].name -replace '^[vV]', '')
+                }
+
+                if ($version) {
+                    Write-Host "  Found version from GitHub tags API: $version"
+                    return [PSCustomObject]@{
+                        Version    = $version
+                        UrlVersion = $version
+                        Data       = $tags
+                    }
+                }
+            } else {
+                Write-Warning "  No tags found from GitHub tags API"
+            }
+        } catch {
+            Write-Warning "  GitHub tags API failed: $_"
+        }
+
+        return $null
     }
 
     # 方式1: API 请求查找更新（当配置了 jsonpath 时）
