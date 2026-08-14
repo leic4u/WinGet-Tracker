@@ -1,7 +1,17 @@
 id: Syngnat.GoNavi
 current_package:
-  version: "0.9.2"
+  version: " 0.9.3"
   architecture:
+    arm64:
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v0.9.3/GoNavi-0.9.3-Windows-Arm64-Installer.msi
+        hash: 8C2C52589C7E7060DE5E3C484CE6ABB8633B326BD38E99F3882B8B9D822DE25A
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v0.9.3/GoNavi-0.9.3-Windows-Arm64-Portable.zip
+        hash: 5701D3E46B6FD04E7CE19830173EDE8548C9CA799DA66162FBA0A15921DED4B9
+    x64:
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v0.9.3/GoNavi-0.9.3-Windows-Amd64-Installer.msi
+        hash: EEE4D28EA1A40D0556FFBF491B54AFE7C209A5FA5FAFDAA84EAF396E19CD853B
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v0.9.3/GoNavi-0.9.3-Windows-Amd64-Portable.zip
+        hash: 4EB964B7453B9E7798B17CCAE154D04EECA673C0A7133DF452EF62777AACC739
 checkver:
   url: "https://github.com/Syngnat/GoNavi"
 autoupdate:
@@ -12,4 +22,4 @@ autoupdate:
     arm64:
       - match_url: Windows-Arm64-Installer\.msi
       - match_url: Windows-Arm64-Portable\.zip
-pr: https://github.com/microsoft/winget-pkgs/pull/415386
+pr: https://github.com/microsoft/winget-pkgs/pull/417246
