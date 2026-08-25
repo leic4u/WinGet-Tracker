@@ -1,13 +1,13 @@
 id: Coremail.CMClient
 current_package:
-  version: "4.2.3.1612"
+  version: "4.2.3.1614"
   architecture:
     x64:
-      - url: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_4.2.3-1612_amd64.exe
-        hash: 8D28E6BBDDC9948030C64DFFFA53E06DB88A3FF863214928EA4CA1DFE9D3B91A
+      - url: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_4.2.3-1614_amd64.exe
+        hash: BCACC561890C5625FB993D919C5178AB6C0DBF538453522A4910CD95C40FF8DD
     x86:
-      - url: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_4.2.3-1612_amd32.exe
-        hash: 6438B55C485B17FACF8F97FE6DE312B1BF4C113CF58BBD703470BFCFF103C7BF
+      - url: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_4.2.3-1614_amd32.exe
+        hash: EEB0DB6EEF20BDBE9A9A841459D2B098A794F449DA9D997E8C58ECFCFC7D4BAF
 checkver:
   url: https://betaweb.coremail.cn/adm_api/s/json?func=cim.common%3AcheckVersion
   method: POST
@@ -17,4 +17,4 @@ autoupdate:
   architecture:
     x86: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_$major.$minor.$patch-$build_amd32.exe
     x64: https://lunkrcdn.icoremail.net/cab/publish/lunkr4mail/cmclient_$major.$minor.$patch-$build_amd64.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/417220
+pr: https://github.com/microsoft/winget-pkgs/pull/423676
