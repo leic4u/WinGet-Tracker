@@ -1,17 +1,17 @@
 id: AnalyseDeCircuit.OxideTerm
 current_package:
-  version: "2.0.23"
+  version: "2.0.24"
   architecture:
     arm64:
-      - url: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v2.0.23/OxideTerm_2.0.23_windows_arm64-setup.exe
-        hash: A6440E9458FD1E88A5B58BB28A567A256A3250344D533AF50280BC2746AFC863
+      - url: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v2.0.24/OxideTerm_2.0.24_windows_arm64-setup.exe
+        hash: B7D8FDF2968ACC7A59E54F63DC5E050FB7A5B080BEA35C260D772720147118BE
     x64:
-      - url: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v2.0.23/OxideTerm_2.0.23_windows_x64-setup.exe
-        hash: 189D5E550A0B3256D2C9564FC811CCF91D11F1255A5A886C555EE11EADAD9D95
+      - url: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v2.0.24/OxideTerm_2.0.24_windows_x64-setup.exe
+        hash: 9BF567E55751562843413E8F0CC7B3E00562648A28E96A211337AC9D8833AC3D
 checkver:
   url: "https://github.com/AnalyseDeCircuit/oxideterm"
 autoupdate:
   architecture:
     x64: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v$version/OxideTerm_$version_windows_x64-setup.exe
     arm64: https://github.com/AnalyseDeCircuit/oxideterm/releases/download/v$version/OxideTerm_$version_windows_arm64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/422202
+pr: https://github.com/microsoft/winget-pkgs/pull/423875
