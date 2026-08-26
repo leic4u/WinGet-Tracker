@@ -1,17 +1,17 @@
 id: XiaoYouChR.GhostDownloader
 current_package:
-  version: "4.3.6"
+  version: "4.3.7"
   architecture:
     arm64:
-      - url: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.3.6/Ghost-Downloader-v4.3.6-Windows-arm64-Setup.exe
-        hash: D765363CD08AF7A299A867841EDF34DCF7D88BF537904DC30ED9D4BFCFC6386F
+      - url: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.3.7/Ghost-Downloader-v4.3.7-Windows-arm64-Setup.exe
+        hash: BDDAE82B0497AA03180AD9FCE1A9F9AA46DA9F302784012012D807152DB917D7
     x64:
-      - url: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.3.6/Ghost-Downloader-v4.3.6-Windows-x86_64-Setup.exe
-        hash: F018EA79A192CB3A9FB5577EAE1B6F124CD35B82F79C34075E48F3EFF6B69F9F
+      - url: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.3.7/Ghost-Downloader-v4.3.7-Windows-x86_64-Setup.exe
+        hash: 080F622D2125A718DCB00D7355826FC6CFF041F9F6C6583CCCD61A81CFE6AE8A
 checkver:
   url: "https://github.com/XiaoYouChR/Ghost-Downloader-3"
 autoupdate:
   architecture:
     x64: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v$version/Ghost-Downloader-v$version-Windows-x86_64-Setup.exe
     arm64: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v$version/Ghost-Downloader-v$version-Windows-arm64-Setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/424408
+pr: https://github.com/microsoft/winget-pkgs/pull/424589
