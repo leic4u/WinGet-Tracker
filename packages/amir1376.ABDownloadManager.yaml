@@ -1,6 +1,6 @@
 id: amir1376.ABDownloadManager
 current_package:
-  version: "1.10.2"
+  version: "1.10.3"
   architecture:
 checkver:
   url: "https://github.com/amir1376/ab-download-manager"
@@ -9,4 +9,4 @@ autoupdate:
   architecture:
     x64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_x64.exe
     arm64: https://github.com/amir1376/ab-download-manager/releases/download/v$version/ABDownloadManager_$version_windows_arm64.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/422729
+pr: https://github.com/microsoft/winget-pkgs/pull/431298
