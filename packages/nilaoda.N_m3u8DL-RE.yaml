@@ -1,6 +1,6 @@
 id: nilaoda.N_m3u8DL-RE
 current_package:
-  version: "0.6.0-beta"
+  version: "127.0.0.1"
   architecture:
 checkver:
   url: "https://github.com/nilaoda/N_m3u8DL-RE"
