@@ -1,14 +1,14 @@
 id: t8y2.DBX
 current_package:
-  version: "0.6.24"
+  version: "0.6.25"
   architecture:
     x64:
-      - url: https://github.com/t8y2/dbx/releases/download/v0.6.24/DBX_0.6.24_x64-setup.exe
-        hash: 60D84E44B767453250C3ED5DDA54DC97DF07DF1253930ED2A60C55CF75E3FBDD
+      - url: https://github.com/t8y2/dbx/releases/download/v0.6.25/DBX_0.6.25_x64-setup.exe
+        hash: A19FB27BCB0737D26C14AE093494E7C3309ED5305EC03D67BC20E7EAE89BE373
 checkver:
   url: "https://github.com/t8y2/dbx"
 autoupdate:
   version_format: $version
   architecture:
     x64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_x64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/441394
+pr: https://github.com/microsoft/winget-pkgs/pull/442056
