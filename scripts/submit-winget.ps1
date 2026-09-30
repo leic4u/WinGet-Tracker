@@ -150,6 +150,162 @@ function Write-Log($message) {
     Add-Content -Path $logFile -Value $logMessage
 }
 
+# ========================================
+# 运行报告：记录每个包的检测结果与提交结果
+# 由 check-version.ps1 创建，本脚本补充提交结果，最后交给 send-telegram-notification.ps1 发送
+# ========================================
+$reportFile = "$PSScriptRoot/../notification.json"
+$reportOrder = New-Object System.Collections.Generic.List[string]
+$reportItems = @{}
+$reportCheckErrors = New-Object System.Collections.Generic.List[object]
+
+function Get-PackageCurrentVersion {
+    param($Config)
+
+    if ($Config.current_package -and $Config.current_package.version) {
+        return [string]$Config.current_package.version
+    }
+    if ($Config.current_version) {
+        return [string]$Config.current_version
+    }
+    return ""
+}
+
+function Add-ReportItem {
+    param(
+        [string]$Id,
+        [string]$CurrentVersion = "",
+        [string]$NewVersion = ""
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Id)) { return }
+
+    if (-not $reportItems.ContainsKey($Id)) {
+        $reportOrder.Add($Id)
+        $reportItems[$Id] = @{
+            id             = $Id
+            currentVersion = [string]$CurrentVersion
+            newVersion     = [string]$NewVersion
+            status         = "pending"
+            prUrl          = ""
+            error          = ""
+            warnings       = New-Object System.Collections.Generic.List[string]
+        }
+    }
+    else {
+        if ($CurrentVersion) { $reportItems[$Id].currentVersion = [string]$CurrentVersion }
+        if ($NewVersion) { $reportItems[$Id].newVersion = [string]$NewVersion }
+    }
+}
+
+function Set-ReportStatus {
+    param(
+        [string]$Id,
+        [string]$Status,
+        [string]$PrUrl,
+        [string]$Error
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Id)) { return }
+    if (-not $reportItems.ContainsKey($Id)) { return }
+
+    $reportItem = $reportItems[$Id]
+    if ($Status) { $reportItem.status = $Status }
+    if ($PrUrl) { $reportItem.prUrl = $PrUrl }
+    if ($Error) { $reportItem.error = $Error }
+}
+
+function Add-ReportWarning {
+    param(
+        [string]$Id,
+        [string]$Message
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Id)) { return }
+    if (-not $reportItems.ContainsKey($Id)) { return }
+    if ([string]::IsNullOrWhiteSpace($Message)) { return }
+
+    $reportItems[$Id].warnings.Add($Message)
+}
+
+function Limit-ReportText {
+    param(
+        [string]$Text,
+        [int]$MaxLength = 300
+    )
+
+    if ([string]::IsNullOrEmpty($Text)) { return "" }
+
+    $value = $Text.Trim()
+    if ($value.Length -le $MaxLength) { return $value }
+    return $value.Substring(0, $MaxLength) + "..."
+}
+
+function Load-NotificationReport {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) { return }
+
+    try {
+        $existingReport = Get-Content $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        Write-Log "Warning: Failed to read existing report $Path : $_"
+        return
+    }
+
+    foreach ($entry in @($existingReport.updates)) {
+        if ($null -eq $entry -or -not $entry.id) { continue }
+
+        Add-ReportItem -Id $entry.id -CurrentVersion ([string]$entry.currentVersion) -NewVersion ([string]$entry.newVersion)
+
+        $entryStatus = [string]$entry.status
+        if ($entryStatus -and $entryStatus -ne "pending") {
+            Set-ReportStatus -Id $entry.id -Status $entryStatus -PrUrl ([string]$entry.prUrl) -Error ([string]$entry.error)
+        }
+        foreach ($warning in @($entry.warnings)) {
+            Add-ReportWarning -Id $entry.id -Message ([string]$warning)
+        }
+    }
+
+    if ($existingReport.PSObject.Properties['checkErrors']) {
+        foreach ($error in @($existingReport.checkErrors)) {
+            if ($null -ne $error) { $reportCheckErrors.Add($error) }
+        }
+    }
+}
+
+function Save-NotificationReport {
+    param([string]$Path)
+
+    try {
+        $reportUpdates = New-Object System.Collections.Generic.List[object]
+        foreach ($id in $reportOrder) {
+            $reportItem = $reportItems[$id]
+            $reportUpdates.Add([PSCustomObject]@{
+                    id             = $reportItem.id
+                    currentVersion = $reportItem.currentVersion
+                    newVersion     = $reportItem.newVersion
+                    status         = $reportItem.status
+                    prUrl          = $reportItem.prUrl
+                    error          = $reportItem.error
+                    warnings       = $reportItem.warnings.ToArray()
+                })
+        }
+
+        $report = [PSCustomObject]@{
+            generatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            updates     = $reportUpdates.ToArray()
+            checkErrors = $reportCheckErrors.ToArray()
+        }
+
+        $report | ConvertTo-Json -Depth 10 | Out-File $Path -Encoding UTF8
+    }
+    catch {
+        Write-Log "Warning: Failed to save notification report: $_"
+    }
+}
+
 if (-not (Test-Path $updatesFile)) {
     Write-Log "No updates to process (updates.json not found)"
     exit 0
@@ -163,19 +319,27 @@ if (-not $updates -or $updates.Count -eq 0) {
 
 Write-Log "Processing $($updates.Count) updates"
 
+# 载入 check-version.ps1 生成的报告，保留已检测到的更新与版本检查异常
+Load-NotificationReport -Path $reportFile
+
 foreach ($item in $updates) {
     try {
         $file = "$PSScriptRoot/../packages/$($item.file)"
         if (-not (Test-Path $file)) {
             Write-Log "Warning: Package config not found: $file"
+            Add-ReportItem -Id $item.id -NewVersion ([string]$item.version)
+            Set-ReportStatus -Id $item.id -Status "error" -Error "包配置文件不存在：$($item.file)"
+            Save-NotificationReport -Path $reportFile
             continue
         }
 
         $config = Get-Content $file | ConvertFrom-Yaml
-        $id = $config.id
+        $id = if ($config.id) { $config.id } else { $item.id }
         $version = $item.version  # URL 解析出的格式化版本号
         $urlVersion = if ($item.PSObject.Properties['url_version']) { $item.url_version } else { $version }
         $checkverData = if ($item.PSObject.Properties['data']) { $item.data } else { $null }
+
+        Add-ReportItem -Id $id -CurrentVersion (Get-PackageCurrentVersion $config) -NewVersion ([string]$version)
 
         # ========================================
         # 第一步：使用 checkver 提取的版本号检查 PR 是否已存在
@@ -200,6 +364,7 @@ foreach ($item in $updates) {
                 $prUrl = $prResult.Url
                 Write-Log "  Existing PR URL: $prUrl"
             }
+            Set-ReportStatus -Id $id -Status "existing" -PrUrl $prUrl
         }
 
         # ========================================
@@ -207,6 +372,7 @@ foreach ($item in $updates) {
         # ========================================
         $processedDownloads = @()
         $tempFiles = @()
+        $downloadErrors = @()
         $detectedVersion = $null
 
         if (-not $skipDownload) {
@@ -215,6 +381,8 @@ foreach ($item in $updates) {
             $downloads = Resolve-Download $config $version $urlVersion $checkverData
             if (-not $downloads -or $downloads.Count -eq 0) {
                 Write-Log "  Error: No download URLs found"
+                Set-ReportStatus -Id $id -Status "error" -Error "未能解析出下载链接（autoupdate 规则未生成 URL）"
+                Save-NotificationReport -Path $reportFile
                 $hasFatalError = $true
                 continue
             }
@@ -270,6 +438,7 @@ foreach ($item in $updates) {
                         }
                     }
                 } else {
+                    $downloadErrors += $res
                     Write-Log "  Error calculating hash for $($res.arch): $($res.Error)"
                 }
             }
@@ -284,8 +453,29 @@ foreach ($item in $updates) {
 
             if ($processedDownloads.Count -eq 0) {
                 Write-Log "  Error: No valid downloads after hash calculation"
+                $downloadErrorText = if ($downloadErrors.Count -gt 0) {
+                    $firstFailed = $downloadErrors[0]
+                    $text = "$($firstFailed.url) 下载失败"
+                    if ($downloadErrors.Count -gt 1) {
+                        $text += "（共 $($downloadErrors.Count) 个下载失败）"
+                    }
+                    elseif ($firstFailed.Error) {
+                        $text += "（$(Limit-ReportText $firstFailed.Error 160)）"
+                    }
+                    $text
+                }
+                else {
+                    "下载或哈希计算失败"
+                }
+                Set-ReportStatus -Id $id -Status "error" -Error $downloadErrorText
+                Save-NotificationReport -Path $reportFile
                 $hasFatalError = $true
                 continue
+            }
+
+            # 部分架构下载失败时，记录为警告（不影响其他架构提交）
+            foreach ($failedDownload in $downloadErrors) {
+                Add-ReportWarning -Id $id -Message "$($failedDownload.url) 下载失败"
             }
 
             # 决定 manifest 版本号
@@ -316,6 +506,7 @@ foreach ($item in $updates) {
                         $prUrl = $existsWithNewVersion.Url
                         Write-Log "  Existing PR URL: $prUrl"
                     }
+                    Set-ReportStatus -Id $id -Status "existing" -PrUrl $prUrl
                 }
             }
         }
@@ -343,6 +534,8 @@ foreach ($item in $updates) {
             # 添加 --urls 参数和所有 URL
             if ($processedDownloads.Count -eq 0) {
                 Write-Log "  Error: No URLs found for package $id"
+                Set-ReportStatus -Id $id -Status "error" -Error "没有可用于提交的下载链接"
+                Save-NotificationReport -Path $reportFile
                 continue
             }
             $komacArgs += "--urls"
@@ -480,9 +673,22 @@ foreach ($item in $updates) {
                     } else {
                         Write-Log "  Error: Failed after $maxRetries attempts"
                         Write-Log "  Last error: $_"
+                        Set-ReportStatus -Id $id -Status "error" -Error "komac 提交失败（已重试 $maxRetries 次）：$(Limit-ReportText "$_" 200)"
                         $hasFatalError = $true
                     }
                 }
+            }
+        }
+
+        # ========================================
+        # 记录本次提交结果，用于 Telegram 通知
+        # ========================================
+        if ($shouldSubmit) {
+            if ($submitSuccess) {
+                Set-ReportStatus -Id $id -Status "submitted" -PrUrl $prUrl
+            }
+            elseif ($packageNotFound) {
+                Set-ReportStatus -Id $id -Status "skipped" -Error "winget-pkgs 中不存在该包，已跳过提交"
             }
         }
 
@@ -515,15 +721,21 @@ foreach ($item in $updates) {
                     Write-Log "  Successfully pushed changes to GitHub"
                 } catch {
                     Write-Log "  Warning: Failed to push changes to GitHub: $_"
+                    Add-ReportWarning -Id $id -Message "本地改动推送失败：$(Limit-ReportText "$_" 160)"
                 }
             } catch {
                 Write-Log "  Warning: Failed to update current_package: $_"
+                Add-ReportWarning -Id $id -Message "本地 YAML 更新失败：$(Limit-ReportText "$_" 160)"
             }
         }
     } catch {
         Write-Log "Error processing $($item.id): $_"
+        Add-ReportItem -Id $item.id -NewVersion ([string]$item.version)
+        Set-ReportStatus -Id $item.id -Status "error" -Error (Limit-ReportText "$_" 300)
         $hasFatalError = $true
     }
+
+    Save-NotificationReport -Path $reportFile
 }
 
 # 清理 updates.json
@@ -531,6 +743,10 @@ if (Test-Path $updatesFile) {
     Remove-Item $updatesFile -Force
     Write-Log "Cleaned up $updatesFile"
 }
+
+# 保存最终运行报告（供 Telegram 通知使用）
+Save-NotificationReport -Path $reportFile
+Write-Log "Notification report saved to $reportFile"
 
 if ($hasFatalError) {
     Write-Log "Submission process completed with fatal errors."

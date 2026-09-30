@@ -9,6 +9,7 @@ WinGet Tracker 是一个自动化工具，用于监控软件包更新并自动�
 - **哈希计算**：自动下载安装包并计算 SHA256 哈希值
 - **重复 PR 检查**：避免重复提交相同的版本更新
 - **自动提交**：使用 `Komac` 工具自动向 winget-pkgs 提交 PR
+- **Telegram 通知**：运行结束后通过 Telegram Bot 推送检测到的更新、提交的 PR 及错误信息
 - **日志记录**：完整的操作日志便于追踪和调试
 
 ## 项目结构
@@ -35,6 +36,7 @@ winget-tracker/
 | `scan-url-version.ps1` | 从 HTML 中所有 URL 扫描版本 |
 | `cleanup-merged-prs.ps1` | 清理已合并的 PR 分支（使用 komac） |
 | `sync-winget-fork.ps1` | 将 fork 的 winget-pkgs 仓库主分支同步到上游 microsoft/winget-pkgs |
+| `send-telegram-notification.ps1` | 读取 `notification.json`，通过 Telegram Bot 发送运行报告 |
 | `validate-config.ps1` | 验证配置文件格式 |
 
 ## 本地使用说明
@@ -56,6 +58,8 @@ winget-tracker/
 
 ### 环境变量
 - `WINGET_TOKEN`: GitHub Personal Access Token（需要 public_repo 权限）
+- `TG_BOT`: Telegram Bot Token（可选，用于发送通知）
+- `TG_USER`: Telegram 消息接收者的 Chat ID（可选，用于发送通知）
 
 ### 使用方法
 
@@ -81,8 +85,48 @@ $env:WINGET_TOKEN="your_github_personal_access_token"
 项目包含 GitHub Actions 工作流，Fork 本仓库后，在 Action 中手动执行一次后，后续即可自动运行：
 
 - **触发方式**：根据 cron 表达式自动运行，或手动触发 (`workflow_dispatch`)
-- **所需 Secrets**：`WINGET_TOKEN`（GitHub Personal Access Token，需要对自己 Fork 的 winget-pkgs 仓库有写权限）
+- **所需 Secrets**：
+  - `WINGET_TOKEN`（GitHub Personal Access Token，需要对自己 Fork 的 winget-pkgs 仓库有写权限）
+  - `TG_BOT`（可选，Telegram Bot Token，用于发送通知）
+  - `TG_USER`（可选，Telegram 消息接收者的 Chat ID，用于发送通知）
 - 工作流开始时会自动将你 Fork 的 winget-pkgs 仓库主分支与上游 microsoft/winget-pkgs 同步（见 `scripts/sync-winget-fork.ps1`），一般无需再去手动同步
+- 工作流最后会将本次运行结果通过 Telegram 推送（未配置 `TG_BOT` / `TG_USER` 时自动跳过）
+
+## Telegram 通知
+
+工作流运行结束后（无论前面的步骤是否成功），只要检测到更新，就会通过 Telegram Bot 发送一份富文本报告，内容包括：
+
+- **检查到新版本**：包名 / 当前版本 / 新版本
+- **已提交 PR**：包名 / PR 链接
+- **已存在 PR，未重复提交**：包名 / PR 链接
+- **提交 PR 出错**：包名 / 错误信息（如安装包下载失败）
+- **警告 / 已跳过提交 / 未处理**：其他需要关注的情况
+- **版本检查异常**：`check-version.ps1` 中检查失败的包
+
+报告使用 Bot API 的 `sendRichMessage` + Rich Markdown（兼容 GitHub Flavored Markdown）发送，**包名、版本、PR 地址、错误信息均以真正的表格呈现**：
+
+```markdown
+### 📦 检查到新版本（3）
+| 包名 | 当前版本 | 新版本 |
+|:---|:---|:---|
+| mg-chao.snow-shot | 1.1.7-beta | 1.1.8 |
+```
+
+若当前 Bot API/客户端不支持富文本消息，脚本会自动降级：`sendRichMessage` → `sendMessage` + MarkdownV2（等宽代码块模拟表格）→ 纯文本，确保通知不会因格式问题丢失。
+
+本地测试方式：
+
+```powershell
+$env:TG_BOT = "123456789:AA..."
+$env:TG_USER = "987654321"
+.\scripts\send-telegram-notification.ps1
+
+# 只查看将要发送的消息内容，不实际发送
+.\scripts\send-telegram-notification.ps1 -DryRun
+
+# 强制使用 MarkdownV2 代码块表格（不使用富文本消息）
+.\scripts\send-telegram-notification.ps1 -NoRichMessage -DryRun
+```
 
 ## 工作流程
 
@@ -98,6 +142,7 @@ $env:WINGET_TOKEN="your_github_personal_access_token"
 │                      │ 2. 检查远程版本（GitHub/API/Web）
 │                      │ 3. 比较版本号
 │                      │ 4. 生成 updates.json（包含更新列表）
+│                      │ 5. 生成 notification.json（初始状态）
 └────────┬─────────────┘
          │
          ▼
@@ -120,7 +165,15 @@ $env:WINGET_TOKEN="your_github_personal_access_token"
 │                      │ 5. 从安装包提取内置版本
 │                      │ 6. 根据 version_format 配置使用 Komac 提交 PR
 │                      │ 7. 更新 YAML 配置并 Git 提交
-└──────────────────────┘
+│                      │ 8. 将提交结果写入 notification.json
+└────────┬─────────────┘
+         │
+         ▼
+┌──────────────────────────────┐
+│ send-telegram-notification   │ 1. 读取 notification.json
+│ .ps1                         │ 2. 汇总更新、PR 与错误信息
+│                              │ 3. 以 Markdown 格式发送到 Telegram
+└──────────────────────────────┘
 ```
 
 ## 版本检查模式
