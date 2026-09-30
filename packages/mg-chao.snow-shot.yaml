@@ -6,5 +6,5 @@ checkver:
   url: "https://github.com/mg-chao/snow-apps"
 autoupdate:
   architecture:
-    x64: https://github.com/mg-chao/snow-apps/releases/download/v$version/snow-shot-$version-windows-x64-offline.exe
+    x64: https://github.com/mg-chao/snow-apps/releases/download/v$version_snow-shot/snow-shot-$version-windows-x64-offline.exe
 pr: https://github.com/microsoft/winget-pkgs/pull/443064
