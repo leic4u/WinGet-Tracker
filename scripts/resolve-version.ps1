@@ -1,3 +1,70 @@
+# 比较两个版本号字符串，返回 -1 / 0 / 1
+# 规则与 check-version.ps1 的 Compare-Versions 保持一致：数值段按数值比较、字母段按字母比较，
+# 同一数值段下带预发布后缀的版本更旧，例如 1.1.7 > 1.1.7-rc1 > 1.1.7-beta > 1.1.7-alpha
+function Compare-VersionText([string]$v1, [string]$v2) {
+    $v1 = ([string]$v1).Trim() -replace '^[vV]', ''
+    $v2 = ([string]$v2).Trim() -replace '^[vV]', ''
+
+    if ($v1 -eq $v2) { return 0 }
+
+    $parts1 = @([regex]::Matches($v1, '\d+|[A-Za-z]+') | ForEach-Object { $_.Value })
+    $parts2 = @([regex]::Matches($v2, '\d+|[A-Za-z]+') | ForEach-Object { $_.Value })
+
+    $maxCount = [Math]::Max($parts1.Count, $parts2.Count)
+
+    for ($i = 0; $i -lt $maxCount; $i++) {
+        $p1 = if ($i -lt $parts1.Count) { $parts1[$i] } else { "" }
+        $p2 = if ($i -lt $parts2.Count) { $parts2[$i] } else { "" }
+
+        if ($p1 -eq $p2) { continue }
+
+        $num1 = 0; $num2 = 0
+        $isNum1 = [int]::TryParse($p1, [ref]$num1)
+        $isNum2 = [int]::TryParse($p2, [ref]$num2)
+
+        if ($isNum1 -and $isNum2) {
+            if ($num1 -ne $num2) { return [Math]::Sign($num1 - $num2) }
+        }
+        elseif ($isNum1) {
+            if ($p2 -eq "") {
+                if ($num1 -eq 0) { continue }
+                return [Math]::Sign($num1)
+            }
+            return 1
+        }
+        elseif ($isNum2) {
+            if ($p1 -eq "") {
+                if ($num2 -eq 0) { continue }
+                return -1
+            }
+            return -1
+        }
+        else {
+            if ($p1 -eq "") { return 1 }
+            if ($p2 -eq "") { return -1 }
+            $diff = [string]::Compare($p1, $p2, $true)
+            if ($diff -ne 0) { return [Math]::Sign($diff) }
+        }
+    }
+
+    return 0
+}
+
+# 从版本列表中选出最新版本
+# 不用 Sort-Object + [version] 强转，后者遇到 v1.1.8_snow-shot、1.1.7-beta 这类字符串会直接报错
+function Select-LatestVersion($versions) {
+    $list = @($versions)
+    if ($list.Count -eq 0) { return $null }
+
+    $latest = $list[0]
+    foreach ($candidate in $list) {
+        if ((Compare-VersionText $candidate $latest) -gt 0) {
+            $latest = $candidate
+        }
+    }
+    return $latest
+}
+
 function Resolve-Version($config) {
     $url = $config.checkver.url
     $method = if ($config.checkver.method) { $config.checkver.method.ToUpper() } else { "GET" }
@@ -61,7 +128,7 @@ function Resolve-Version($config) {
                 }
 
                 if ($tagVersions.Count -gt 0) {
-                    $version = $tagVersions | Sort-Object { [version]$_ } -Descending | Select-Object -First 1
+                    $version = Select-LatestVersion $tagVersions
                 } else {
                     $version = ($tags[0].name -replace '^[vV]', '')
                 }
@@ -160,6 +227,17 @@ function Resolve-Version($config) {
                 }
             }
 
+            # 预先编译 regex：它用于从 jsonpath 抽出的原始值中提取版本号，提取结果才参与排序
+            $compiledRegex = $null
+            if ($config.checkver.regex) {
+                try {
+                    $compiledRegex = [regex]::new($config.checkver.regex)
+                } catch {
+                    Write-Warning "  Invalid regex pattern: $($config.checkver.regex) - $_"
+                    return $null
+                }
+            }
+
             if ($current.Count -gt 0) {
                 # 收集所有版本号
                 $versions = @()
@@ -176,21 +254,35 @@ function Resolve-Version($config) {
                         $itemVersion = $item.ToString()
                     }
 
-                    if ($itemVersion) {
-                        # 应用排除模式过滤
-                        if ($config.checkver.exclude_pattern) {
-                            if ($itemVersion -notmatch $config.checkver.exclude_pattern) {
-                                $versions += $itemVersion
-                            }
+                    if (-not $itemVersion) { continue }
+
+                    # 应用排除模式过滤（作用于 jsonpath 抽出的原始值）
+                    if ($config.checkver.exclude_pattern -and $itemVersion -match $config.checkver.exclude_pattern) {
+                        continue
+                    }
+
+                    # 用 regex 从原始值中提取版本号
+                    if ($compiledRegex) {
+                        $match = $compiledRegex.Match($itemVersion)
+                        if (-not $match.Success) {
+                            Write-Host "  Skipped (regex not matched): $itemVersion"
+                            continue
+                        }
+                        if ($match.Groups["version"].Success) {
+                            $itemVersion = $match.Groups["version"].Value.Trim()
+                        } elseif ($match.Groups.Count -gt 1) {
+                            $itemVersion = $match.Groups[1].Value.Trim()
                         } else {
-                            $versions += $itemVersion
+                            $itemVersion = $match.Value.Trim()
                         }
                     }
+
+                    $versions += $itemVersion
                 }
 
                 if ($versions.Count -gt 0) {
                     # 返回最新的版本
-                    $version = $versions | Sort-Object { [version]$_ } -Descending | Select-Object -First 1
+                    $version = Select-LatestVersion $versions
                     Write-Host "  Found latest version after filtering: $version"
                 } else {
                     Write-Warning "  No versions found after filtering"
@@ -199,31 +291,6 @@ function Resolve-Version($config) {
             } else {
                 Write-Warning "  Could not extract version using jsonpath: $jsonPath"
                 return $null
-            }
-
-            # 如果配置了 regex，对原始版本号进行进一步截取
-            if ($config.checkver.regex) {
-                $regex = $config.checkver.regex
-                try {
-                    $compiledRegex = [regex]::new($regex)
-                    $match = $compiledRegex.Match($version)
-                    if ($match.Success) {
-                        if ($match.Groups["version"].Success) {
-                            $version = $match.Groups["version"].Value.Trim()
-                        } elseif ($match.Groups.Count -gt 1) {
-                            $version = $match.Groups[1].Value.Trim()
-                        } else {
-                            $version = $match.Value.Trim()
-                        }
-                        Write-Host "  Extracted via regex from jsonpath: $version"
-                    } else {
-                        Write-Warning "  Regex pattern did not match JSON extracted value: $version"
-                        return $null
-                    }
-                } catch {
-                    Write-Warning "  Invalid regex pattern: $regex - $_"
-                    return $null
-                }
             }
 
             $urlVersion = $version
