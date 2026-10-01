@@ -1,12 +1,12 @@
 id: 0xErwin1.DBFlux
 current_package:
-  version: "0.7.8"
+  version: "0.8.5"
   architecture:
     x64:
-      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.7.8/dbflux-windows-amd64-setup.exe
-        hash: E8F64A5009ABC9EF1105B6C26894011435DA738D5708073973132318F545BE2F
-      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.7.8/dbflux-windows-amd64.zip
-        hash: 
+      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.8.5/dbflux-windows-amd64-setup.exe
+        hash: 7AD7E9A9E1EA554079D35D69887D685F85E6DDE23740C6AC9B317C988DBEB389
+      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.8.5/dbflux-windows-amd64.zip
+        hash: 2BCD2DB5B14C423853E04992B283B9AE6C8A32773F76A53F1819B1BC65FC7FEF
 checkver:
   url: "https://github.com/0xErwin1/dbflux"
 autoupdate:
