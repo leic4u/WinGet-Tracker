@@ -67,8 +67,10 @@ function Compare-Versions {
 
 $packages = Get-ChildItem "$PSScriptRoot/../packages/*.yaml"
 $result = @()
+$checkErrors = @()
 $hasError = $false
 $logFile = "$PSScriptRoot/../logs/check-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$reportPath = "$PSScriptRoot/../notification.json"
 
 $logDir = Split-Path $logFile -Parent
 if (-not (Test-Path $logDir)) {
@@ -80,6 +82,11 @@ $oldLogs = Get-ChildItem $logDir -Filter "*.log" -ErrorAction SilentlyContinue |
 if ($oldLogs) {
     $oldLogs | Remove-Item -Force -ErrorAction SilentlyContinue
     Write-Host "Cleaned up $($oldLogs.Count) old log files"
+}
+
+# 清理上一次运行留下的通知报告，避免旧数据被重复发送
+if (Test-Path $reportPath) {
+    Remove-Item $reportPath -Force -ErrorAction SilentlyContinue
 }
 
 enum LogLevel {
@@ -116,9 +123,13 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     $pkgName = $pkg.BaseName
     $currentId = $pkgName
     $threadLogs = New-Object System.Collections.Generic.List[string]
+    $threadErrors = New-Object System.Collections.Generic.List[object]
     function Write-ThreadLog($message, $level = 'INFO') {
         $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
         $threadLogs.Add("[$timestamp] [$currentId] [$level] $message")
+        if ($level -eq 'ERROR') {
+            $threadErrors.Add([PSCustomObject]@{ id = $currentId; message = [string]$message })
+        }
     }
 
     # 覆盖标准输出命令，将其捕获到我们的线程日志中
@@ -245,11 +256,12 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                     Write-ThreadLog " Skipping update: Resolved URL matches current URL even though version string differs" -level "INFO"
                 } else {
                     $update = [PSCustomObject]@{
-                        id          = $id
-                        version     = $version
-                        url_version = $urlVersion
-                        file        = $pkg.Name
-                        data        = $checkverData
+                        id              = $id
+                        version         = $version
+                        url_version     = $urlVersion
+                        current_version = $currentVersion
+                        file            = $pkg.Name
+                        data            = $checkverData
                     }
                     Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
                 }
@@ -266,6 +278,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
 
     return [PSCustomObject]@{
         Logs     = $threadLogs.ToArray()
+        Errors   = $threadErrors.ToArray()
         Update   = $update
         HasError = $threadHasError
     }
@@ -274,6 +287,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
 foreach ($res in $parallelResults) {
     if ($res.HasError) { $hasError = $true }
     if ($null -ne $res.Update) { $result += $res.Update }
+    if ($res.Errors) { $checkErrors += @($res.Errors) }
     
     foreach ($log in $res.Logs) {
         if ($log -match '\[INFO\]') { Write-Host $log -ForegroundColor Green }
@@ -284,6 +298,35 @@ foreach ($res in $parallelResults) {
 }
 
 Write-Log "Check complete. Found $($result.Count) updates."
+
+# 写入运行报告（状态为 pending），submit-winget.ps1 会继续补充提交结果，
+# 最终由 send-telegram-notification.ps1 读取并发送通知
+$reportUpdates = @()
+foreach ($u in $result) {
+    $reportUpdates += @{
+        id             = $u.id
+        currentVersion = [string]$u.current_version
+        newVersion     = [string]$u.version
+        status         = "pending"
+        prUrl          = ""
+        error          = ""
+        warnings       = @()
+    }
+}
+
+$report = @{
+    generatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    updates     = $reportUpdates
+    checkErrors = @($checkErrors)
+}
+
+try {
+    $report | ConvertTo-Json -Depth 10 | Out-File $reportPath -Encoding UTF8
+    Write-Log "Notification report saved to $reportPath" -level "INFO"
+}
+catch {
+    Write-Log "Warning: Failed to save notification report: $_" -level "WARNING"
+}
 
 if ($result.Count -gt 0) {
     $outputPath = "$PSScriptRoot/../updates.json"

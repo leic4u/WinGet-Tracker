@@ -55,3 +55,13 @@ jobs:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
           ACTIONS_STEP_DEBUG: true
 
+      # 无论前面的步骤是否成功，只要检测到更新就发送 Telegram 通知
+      - name: Send Telegram notification
+        if: always()
+        shell: pwsh
+        run: |
+          ./scripts/send-telegram-notification.ps1
+        env:
+          TG_BOT: ${{ secrets.TG_BOT }}
+          TG_USER: ${{ secrets.TG_USER }}
+

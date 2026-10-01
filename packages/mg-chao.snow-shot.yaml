@@ -1,13 +1,12 @@
 id: mg-chao.snow-shot
 current_package:
-  version: "1.1.1-beta"
+  version: "1.1.8"
   architecture:
-    x64:
-      - url: https://github.com/mg-chao/snow-apps/releases/download/v1.1.1-beta/snow-shot-1.1.1-beta-windows-x64-offline.exe
-        hash: 008CDA68407B026E505248E3C398AEA4C36200F0CD0998B01485660F6209FA00
 checkver:
-  url: "https://github.com/mg-chao/snow-apps"
+  url: https://api.github.com/repos/mg-chao/snow-apps/releases/latest
+  jsonpath: tag_name
+  regex: 'v(\d+\.\d+\.\d+)_snow-shot$'
 autoupdate:
   architecture:
-    x64: https://github.com/mg-chao/snow-apps/releases/download/v$version/snow-shot-$version-windows-x64-offline.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/439863
+    x64: https://github.com/mg-chao/snow-apps/releases/download/v$version_snow-shot/snow-shot-$version-windows-x64-offline.exe
+pr: https://github.com/microsoft/winget-pkgs/pull/443937
