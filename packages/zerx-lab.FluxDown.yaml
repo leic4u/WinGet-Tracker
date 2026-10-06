@@ -1,17 +1,17 @@
 id: zerx-lab.FluxDown
 current_package:
-  version: "0.5.3"
+  version: "0.5.4"
   architecture:
     arm64:
-      - url: https://github.com/zerx-lab/FluxDown/releases/download/v0.5.3/FluxDown-0.5.3-windows-arm64-setup.exe
-        hash: 15378C4775CA027EF294BA7C36530949BF5DF057451642971E19691472E13A3D
+      - url: https://github.com/zerx-lab/FluxDown/releases/download/v0.5.4/FluxDown-0.5.4-windows-arm64-setup.exe
+        hash: B1D862073BD93F087571AB3DD8C233565E88B50C4D350EF7B29A99AB726F99B1
     x64:
-      - url: https://github.com/zerx-lab/FluxDown/releases/download/v0.5.3/FluxDown-0.5.3-windows-x64-setup.exe
-        hash: 979773C826B19ED9D837396BC571669A38BEF3E8A6D1D0DF511E050B7063790E
+      - url: https://github.com/zerx-lab/FluxDown/releases/download/v0.5.4/FluxDown-0.5.4-windows-x64-setup.exe
+        hash: 6FD5FEEC03182A8676A20F7BE69EF054318C4491B4192C93E2B587E42042409C
 checkver:
   url: "https://github.com/zerx-lab/FluxDown"
 autoupdate:
   architecture:
     x64: https://github.com/zerx-lab/FluxDown/releases/download/v$version/FluxDown-$version-windows-x64-setup.exe
     arm64: https://github.com/zerx-lab/FluxDown/releases/download/v$version/FluxDown-$version-windows-arm64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/446158
+pr: https://github.com/microsoft/winget-pkgs/pull/447493
