@@ -1,17 +1,17 @@
 id: Syngnat.GoNavi
 current_package:
-  version: " 1.1.1"
+  version: " 1.1.2"
   architecture:
     arm64:
-      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.1/GoNavi-1.1.1-Windows-Arm64-Portable.zip
-        hash: 67E56DFA4CCA43FD1CD83F06B34683468348374FF387F630F2D605B1EE1E2549
-      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.1/GoNavi-1.1.1-Windows-Arm64-Installer.msi
-        hash: 01FB7A3D41E56C556ECBA3F415DC7E8B5133117FDDA84D4B982E87B25ED38889
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.2/GoNavi-1.1.2-Windows-Arm64-Portable.zip
+        hash: BBF02531AB342952308051A412499AE11BEC29B6E253C3A925B09EB09A83B80B
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.2/GoNavi-1.1.2-Windows-Arm64-Installer.msi
+        hash: 34C280F3854CA1AC48FDDC7E3E3E1106DED77D6349BC4010E310D6D05393B9DE
     x64:
-      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.1/GoNavi-1.1.1-Windows-Amd64-Installer.msi
-        hash: D2D8FC794772E1EBCD16807F4EC39EB8E9FB645D41CC10A7057D735CA95DBFF6
-      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.1/GoNavi-1.1.1-Windows-Amd64-Portable.zip
-        hash: 34A19985465C0457158DD54501EE2194069141F93161740B54C85D627B735A36
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.2/GoNavi-1.1.2-Windows-Amd64-Installer.msi
+        hash: 5ACA48608DFC0846C59511E36E0F61DD6B667A2029E7C872FD6CE770D3576696
+      - url: https://github.com/Syngnat/GoNavi/releases/download/v1.1.2/GoNavi-1.1.2-Windows-Amd64-Portable.zip
+        hash: EE6D507DFE3F8C3B50D6EE82E3A61A443D2240D406B2A3D13968AB97A0E4C17E
 checkver:
   url: "https://github.com/Syngnat/GoNavi"
 autoupdate:
@@ -22,4 +22,4 @@ autoupdate:
     arm64:
       - match_url: Windows-Arm64-Installer\.msi
       - match_url: Windows-Arm64-Portable\.zip
-pr: https://github.com/microsoft/winget-pkgs/pull/447641
+pr: https://github.com/microsoft/winget-pkgs/pull/450838
