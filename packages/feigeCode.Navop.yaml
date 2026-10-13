@@ -1,13 +1,13 @@
 id: feigeCode.Navop
 current_package:
-  version: " 0.20.0"
+  version: " 0.20.1"
   architecture:
     x64:
-      - url: https://github.com/feigeCode/navop/releases/download/v0.20.0/navop-0.20.0-windows-x64.msi
-        hash: B3D40879140299758DEF1897F09429BFA8734810DA6BA1F0CE5FCEAE88A263B7
+      - url: https://github.com/feigeCode/navop/releases/download/v0.20.1/navop-0.20.1-windows-x64.msi
+        hash: FFDF4B90083FE408A1F232A38D8CFF0ED7290E374464CCE23C6D0F8D3A6E297C
     x86:
-      - url: https://github.com/feigeCode/navop/releases/download/v0.20.0/navop-0.20.0-win32.msi
-        hash: 7019AE76B344B96A149F97971813299C9895238E583E1EB05F953AF8923D4D12
+      - url: https://github.com/feigeCode/navop/releases/download/v0.20.1/navop-0.20.1-win32.msi
+        hash: 2837395EE492B97D19163070AB3A3F487BAA50AFE12ECC1AA8F53C1F5F29C5D8
 checkver:
   url: "https://github.com/feigeCode/navop"
 autoupdate:
