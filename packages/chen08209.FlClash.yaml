@@ -1,17 +1,17 @@
 id: chen08209.FlClash
 current_package:
-  version: "0.8.99+2026100301"
+  version: "0.9.0+2026101401"
   architecture:
-    x64:
-      - url: https://github.com/chen08209/FlClash/releases/download/v0.8.99/FlClash-0.8.99-windows-amd64-setup.exe
-        hash: C0DBD84C8C41F71AC0AB07118278E21792D7EADA40D0E91AAFB095E2168ED715
     arm64:
-      - url: https://github.com/chen08209/FlClash/releases/download/v0.8.99/FlClash-0.8.99-windows-arm64-setup.exe
-        hash: 10a86361be6c178daf12fee29b67225db9d12f39ad03b652f06a481c31c68064
+      - url: https://github.com/chen08209/FlClash/releases/download/v0.9.0/FlClash-0.9.0-windows-arm64-setup.exe
+        hash: AF606D42F9FA571DE610E26988835A8A9C818C6B9C84C64652F71F1BC7CC5D39
+    x64:
+      - url: https://github.com/chen08209/FlClash/releases/download/v0.9.0/FlClash-0.9.0-windows-amd64-setup.exe
+        hash: EDF27CC9CE9A36F63AE94551006763209EBAE89EA9811DCED281DDBCD6F3395B
 checkver:
   url: "https://github.com/chen08209/FlClash"
 autoupdate:
   architecture:
     x64: https://github.com/chen08209/FlClash/releases/download/v$version/FlClash-$version-windows-amd64-setup.exe
     arm64: https://github.com/chen08209/FlClash/releases/download/v$version/FlClash-$version-windows-arm64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/446172
+pr: https://github.com/microsoft/winget-pkgs/pull/452284
