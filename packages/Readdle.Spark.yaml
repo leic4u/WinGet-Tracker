@@ -3,8 +3,8 @@ current_package:
   version: "3.31.6"
   architecture:
     x64:
-      - url: https://downloads.sparkmailapp.com/Spark3/win/dist/3.31.6.141244/Spark.exe
-        hash: 9123AA1363EB66A9B43E3DCB8F7ADB42350A2CF0FA080B3A13CBFDC316C61CD6
+      - url: https://downloads.sparkmailapp.com/Spark3/win/dist/3.31.6.141261/Spark.exe
+        hash: 21E2C87EA4792EAE6840704BD36EBA066996C4A1F9F5AC8732C5A783518C324E
 checkver:
   url: https://downloads.sparkmailapp.com/Spark3/win/dist/appcast.xml
   regex: Version (\d+\.\d+\.\d+\.\d+)
@@ -12,4 +12,4 @@ autoupdate:
   version_format: $pkgMajor.$pkgMinor.$pkgPatch
   architecture:
     x64: https://downloads.sparkmailapp.com/Spark3/win/dist/$version/Spark.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/451856
+pr: https://github.com/microsoft/winget-pkgs/pull/452763
