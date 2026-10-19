@@ -6,7 +6,7 @@ current_package:
       - url: https://github.com/InterceptSuite/ProxyBridge/releases/download/v4.1.1/ProxyBridge-Setup-4.1.1.exe
         hash: 754F45FB31F3953B9B81005090F9A479F89827ADB628CF2C76BC4139F673A152
 checkver:
-  url: https://api.github.com/repos/InterceptSuite/ProxyBridge/releases/latest
+  url: https://api.github.com/repos/InterceptSuite/ProxyBridge/releases?per_page=5
   jsonpath: tag_name
   regex: 'v(\d+\.\d+\.\d+)_Windows$'
 autoupdate:
