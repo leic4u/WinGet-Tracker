@@ -1,0 +1,15 @@
+id: InterceptSuite.ProxyBridge
+current_package:
+  version: "4.1.1"
+  architecture:
+    x64:
+      - url: https://github.com/InterceptSuite/ProxyBridge/releases/download/v4.1.1/ProxyBridge-Setup-4.1.1.exe
+        hash: 754F45FB31F3953B9B81005090F9A479F89827ADB628CF2C76BC4139F673A152
+checkver:
+  url: https://api.github.com/repos/InterceptSuite/ProxyBridge/releases/latest
+  jsonpath: tag_name
+  regex: 'v(\d+\.\d+\.\d+)_Windows$'
+autoupdate:
+  architecture:
+    x64: https://github.com/InterceptSuite/ProxyBridge/releases/download/v$version_Windows/ProxyBridge-Setup-$version.exe
+pr: https://github.com/microsoft/winget-pkgs/pull/451162
