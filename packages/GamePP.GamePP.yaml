@@ -1,10 +1,10 @@
 id: GamePP.GamePP
 current_package:
-  version: "5.6.138.1009"
+  version: "5.6.141.1016"
   architecture:
     x86:
-      - url: https://dl-update.gamepp.com/global/update/Setup_5.6.138.1009.exe
-        hash: 57AF4729D5991239D7222BA779320ABACC2475CFF63C3B941DEF4E3C7E416F70
+      - url: https://dl-update.gamepp.com/global/update/Setup_5.6.141.1016.exe
+        hash: 2B974590077AE3B01034FD2203E3C676499848B44E561358EA7EFC4EC872FBF8
 checkver:
   url: https://liveupdate2.gamepp.com/checkupdate/update.php?m=2
   jsonpath: "data.version"
@@ -12,4 +12,4 @@ autoupdate:
   architecture:
     x86: 
       jsonpath: "data.list.url"
-pr: https://github.com/microsoft/winget-pkgs/pull/450101
+pr: https://github.com/microsoft/winget-pkgs/pull/456422
