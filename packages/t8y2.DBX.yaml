@@ -1,10 +1,7 @@
 id: t8y2.DBX
 current_package:
-  version: "0.6.64-beta.20261102.1"
+  version: "0.6.64"
   architecture:
-    x64:
-      - url: https://github.com/t8y2/dbx/releases/download/v0.6.64-beta.20261102.1/DBX_0.6.64-beta.20261102.1_x64-setup.exe
-        hash: 997CB18D937B6FBE3AB9C249FF0CC4C85FA7862934ADC6995482B18D380348BB
 checkver:
   url: "https://github.com/t8y2/dbx"
 autoupdate:
