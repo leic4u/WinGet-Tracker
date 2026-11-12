@@ -72,6 +72,19 @@
         }
     }
 
+    # 验证可选的 current_package.submit_version
+    # version 记录真实版本号，submit_version 记录提交到 winget 的版本号；
+    # 两者相同时该字段冗余，submit-winget.ps1 会自动省略它。
+    if ($config.current_package -and $null -ne $config.current_package.submit_version) {
+        $submitVersion = [string]$config.current_package.submit_version
+        if ([string]::IsNullOrWhiteSpace($submitVersion)) {
+            $errors += "Empty optional field: 'current_package.submit_version'"
+        }
+        elseif ($config.current_package.version -and $submitVersion -eq [string]$config.current_package.version) {
+            $warnings += "'current_package.submit_version' equals 'current_package.version'; the field can be removed"
+        }
+    }
+
     # 输出结果
     $isValid = $errors.Count -eq 0
 

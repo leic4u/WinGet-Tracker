@@ -3,6 +3,7 @@ Import-Module powershell-yaml
 . "$PSScriptRoot/calc-hash.ps1"
 . "$PSScriptRoot/check-existing-pr.ps1"
 . "$PSScriptRoot/get-installer-version.ps1"
+. "$PSScriptRoot/update-pr-title.ps1"
 
 # 同步 komac 储存库，确保使用最新的 manifest 数据
 $komacPath = "$env:LOCALAPPDATA\Programs\Komac\bin\komac.exe"
@@ -18,7 +19,8 @@ if ($LASTEXITCODE -ne 0) {
 function Update-PackageCurrentInfo {
     param(
         [string]$filePath,
-        [string]$version,
+        [string]$realVersion,     # checkver 检测到的真实版本号，写入 current_package.version，供下次版本比对使用
+        [string]$submitVersion,   # 提交到 winget 的版本号；与真实版本号一致时省略 submit_version 字段
         [array]$downloads
     )
 
@@ -32,7 +34,12 @@ function Update-PackageCurrentInfo {
     $pattern = '(?m)^current_package:\r?\n(?:^[ \t]+.*\r?\n?)*'
 
     # 构建并拼接新的 current_package 节点
-    $replacement = "current_package:`n  version: `"$version`"`n  architecture:`n"
+    # version 记录真实版本号；仅当提交版本与真实版本不一致时才写入可选的 submit_version
+    $replacement = "current_package:`n  version: `"$realVersion`"`n"
+    if ($submitVersion -and $submitVersion -ne $realVersion) {
+        $replacement += "  submit_version: `"$submitVersion`"`n"
+    }
+    $replacement += "  architecture:`n"
     $groupedDownloads = $downloads | Group-Object arch
     foreach ($group in $groupedDownloads) {
         $replacement += "    $($group.Name):`n"
@@ -335,7 +342,7 @@ foreach ($item in $updates) {
 
         $config = Get-Content $file | ConvertFrom-Yaml
         $id = if ($config.id) { $config.id } else { $item.id }
-        $version = $item.version  # URL 解析出的格式化版本号
+        $version = $item.version  # checkver 检测到的真实版本号，写入 current_package.version
         $urlVersion = if ($item.PSObject.Properties['url_version']) { $item.url_version } else { $version }
         $checkverData = if ($item.PSObject.Properties['data']) { $item.data } else { $null }
 
@@ -351,6 +358,8 @@ foreach ($item in $updates) {
         $skipDownload = $false
         $manifestVersion = Get-ManifestVersion -config $config -version $version -urlVersion $urlVersion -detectedVersion $null
         $prUrl = $null  # 用于记录 PR URL
+        $submittedPr = $null  # gh pr list 回退查询到的 PR 信息，供 PR 标题修改复用
+        $versionReplaced = $false
 
         if ($manifestVersion -ne $version) {
             Write-Log "  Formatted manifest version using version_format: $manifestVersion"
@@ -478,9 +487,8 @@ foreach ($item in $updates) {
                 Add-ReportWarning -Id $id -Message "$($failedDownload.url) 下载失败"
             }
 
-            # 决定 manifest 版本号
+            # 决定提交到 winget 的 manifest 版本号
             $manifestVersion = Get-ManifestVersion -config $config -version $version -urlVersion $urlVersion -detectedVersion $detectedVersion
-            $versionReplaced = $false
 
             if ($config.autoupdate.version_format) {
                 Write-Log "  Formatted manifest version using version_format: $manifestVersion"
@@ -494,8 +502,7 @@ foreach ($item in $updates) {
             # 第三步：使用 installer 内置版本号再次检查 PR 是否已存在
             # ========================================
             if ($manifestVersion -ne $version) {
-                $versionReplaced = $true
-                Write-Log "Step 3: Re-checking PR existence with installer version $manifestVersion"
+                Write-Log "Step 3: Re-checking PR existence with submit version $manifestVersion"
                 $existsWithNewVersion = Test-WingetPRExists $id $manifestVersion
                 $existsNew = if ($existsWithNewVersion -is [PSCustomObject] -and $existsWithNewVersion.Exists) { $true } else { [bool]$existsWithNewVersion }
                 if ($existsNew) {
@@ -509,6 +516,17 @@ foreach ($item in $updates) {
                     Set-ReportStatus -Id $id -Status "existing" -PrUrl $prUrl
                 }
             }
+        }
+
+        # ========================================
+        # 版本号映射：current_package.version 记录 checkver 检测到的真实版本号，
+        # current_package.submit_version 记录实际提交到 winget 的版本号。
+        # 两者不一致时，PR 标题末尾需要补上真实版本号（如 3.32.4.141552）。
+        # ========================================
+        $submitVersion = $manifestVersion
+        $versionReplaced = ($submitVersion -ne $version)
+        if ($versionReplaced) {
+            Write-Log "  Real version '$version' differs from submit version '$submitVersion'"
         }
 
         # ========================================
@@ -595,63 +613,12 @@ foreach ($item in $updates) {
                             }
                         }
 
-                        # 如果版本号被替换，修改 PR 标题以包含 URL 版本号
+                        # submit_version 与 version 不一致时，把真实版本号补到 PR 标题末尾
                         if ($versionReplaced) {
-                            Write-Log "  Updating PR title to include URL version..."
-                            try {
-                                $env:GH_TOKEN = $env:WINGET_TOKEN
-                                # 复用之前已查询到的 PR 信息
-                                if ($submittedPr) {
-                                    $prNumber = $submittedPr.number
-                                    $prTitle = $submittedPr.title
-                                } elseif ($prUrl) {
-                                    # 如果 PR 是本脚本刚提交的，直接使用 komac 输出中的 PR URL 定位 PR
-                                    $prNumberMatch = [regex]::Match($prUrl, 'github\.com/microsoft/winget-pkgs/pull/(\d+)')
-                                    if ($prNumberMatch.Success) {
-                                        $prNumber = $prNumberMatch.Groups[1].Value
-                                        $prJson = gh pr view $prNumber `
-                                            --repo microsoft/winget-pkgs `
-                                            --json title `
-                                            2>&1
-                                        $prInfo = $prJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-                                        if ($prInfo -and $prInfo.title) {
-                                            $prTitle = $prInfo.title
-                                        }
-                                    }
-                                } else {
-                                    # 回退：重新搜索 PR
-                                    $searchQuery = "$id $manifestVersion"
-                                    $prsJson = gh pr list `
-                                        --repo microsoft/winget-pkgs `
-                                        --state open `
-                                        --search "$searchQuery" `
-                                        --author "@me" `
-                                        --json number,title `
-                                        2>&1
-                                    $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-                                    if ($prs -and $prs.Count -gt 0) {
-                                        $prNumber = $prs[0].number
-                                        $prTitle = $prs[0].title
-                                    }
-                                }
-                                if ($prNumber -and $prTitle) {
-                                    if ($prTitle.EndsWith("($version)")) {
-                                        Write-Log "  PR title already includes URL version: $prTitle"
-                                    } else {
-                                        $newTitle = "$prTitle ($version)"
-                                        gh pr edit $prNumber `
-                                            --repo microsoft/winget-pkgs `
-                                            --title "$newTitle" `
-                                            2>&1
-                                        Write-Log "  PR title updated to: $newTitle"
-                                    }
-                                } else {
-                                    Write-Log "  Warning: Could not find the submitted PR to update title"
-                                }
-                            } catch {
-                                Write-Log "  Warning: Failed to update PR title: $_"
-                            } finally {
-                                $env:GH_TOKEN = $null
+                            Write-Log "  Updating PR title to include real version $version..."
+                            $titleUpdated = Update-SubmittedPRTitle -PrUrl $prUrl -PrInfo $submittedPr -Id $id -SubmitVersion $submitVersion -RealVersion $version
+                            if (-not $titleUpdated) {
+                                Add-ReportWarning -Id $id -Message "PR 标题补充真实版本号 $version 失败"
                             }
                         }
                     } else {
@@ -699,7 +666,7 @@ foreach ($item in $updates) {
         if (-not $shouldSubmit -or $submitSuccess -or $packageNotFound) {
             Write-Log "Step 5: Updating current_package in $file"
             try {
-                Update-PackageCurrentInfo -filePath $file -version $manifestVersion -downloads $processedDownloads
+                Update-PackageCurrentInfo -filePath $file -realVersion $version -submitVersion $manifestVersion -downloads $processedDownloads
 
                 # 更新 PR URL 到 YAML 文件
                 if ($prUrl) {
@@ -716,7 +683,11 @@ foreach ($item in $updates) {
                     git config user.email "github-actions[bot]@users.noreply.github.com"
                     git config user.name "github-actions[bot]"
                     git add $relativePath
-                    git commit -m "Update $id to $manifestVersion" -m "- Update current_package with version, urls and hashes" 2>&1
+                    $commitBody = "- Update current_package with version, urls and hashes"
+                    if ($versionReplaced) {
+                        $commitBody += "`n- Submitted to winget-pkgs as $submitVersion"
+                    }
+                    git commit -m "Update $id to $version" -m $commitBody 2>&1
                     git push 2>&1
                     Write-Log "  Successfully pushed changes to GitHub"
                 } catch {

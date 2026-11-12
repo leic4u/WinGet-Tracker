@@ -1,6 +1,7 @@
 id: Readdle.Spark
 current_package:
-  version: "3.32.4"
+  version: "3.32.4.141552"
+  submit_version: "3.32.4"
   architecture:
 checkver:
   url: https://downloads.sparkmailapp.com/Spark3/win/dist/appcast.xml

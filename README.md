@@ -31,6 +31,7 @@ winget-tracker/
 | `resolve-download.ps1` | 解析下载 URL，支持变量替换、jsonpath 提取、match_url 匹配 |
 | `calc-hash.ps1` | 下载文件并计算 SHA256（带重试） |
 | `check-existing-pr.ps1` | 检查 winget-pkgs 是否已存在 PR |
+| `update-pr-title.ps1` | 提交版本与真实版本不一致时，在 PR 标题末尾补充真实版本号 |
 | `get-installer-version.ps1` | 从 EXE/MSI/MSIX 提取内置版本号 |
 | `infer-version-from-filename.ps1` | 从 URL 文件名推断版本号 |
 | `scan-url-version.ps1` | 从 HTML 中所有 URL 扫描版本 |
@@ -78,7 +79,7 @@ $env:WINGET_TOKEN="your_github_personal_access_token"
 ```powershell
 .\scripts\submit-winget.ps1
 ```
-读取 `updates.json`，检查 PR 存在性，下载并计算哈希，从安装包提取版本，使用 Komac 提交 PR，更新 YAML 配置并自动 Git 提交。
+读取 `updates.json`，检查 PR 存在性，下载并计算哈希，从安装包提取版本，使用 Komac 提交 PR，必要时补充 PR 标题，更新 YAML 配置（`version` / `submit_version`）并自动 Git 提交。
 
 ## GitHub Actions 自动化使用说明
 
@@ -150,8 +151,8 @@ $env:TG_USER = "987654321"
 │  updates.json    │ 中间文件格式：
 │                  │ {
 │                  │   "id": "Publisher.AppName",
-│                  │   "version": "1.2.3",        # 用于 manifest
-│                  │   "url_version": "1.2.3.456", # 原始版本
+│                  │   "version": "1.2.3",        # 真实版本号（用于版本比对）
+│                  │   "url_version": "1.2.3.456", # URL 中的原始版本号
 │                  │   "file": "Publisher.AppName.yaml"
 │                  │ }
 └────────┬─────────┘
@@ -164,8 +165,9 @@ $env:TG_USER = "987654321"
 │                      │ 4.下载安装包并计算哈希
 │                      │ 5. 从安装包提取内置版本
 │                      │ 6. 根据 version_format 配置使用 Komac 提交 PR
-│                      │ 7. 更新 YAML 配置并 Git 提交
-│                      │ 8. 将提交结果写入 notification.json
+│                      │ 7. 提交版本与真实版本不一致时补充 PR 标题
+│                      │ 8. 更新 YAML 的 version / submit_version 并 Git 提交
+│                      │ 9. 将提交结果写入 notification.json
 └────────┬─────────────┘
          │
          ▼
@@ -228,7 +230,8 @@ checkver:
 ```yaml
 id: Publisher.AppName
 current_package:
-  version: "1.0.0"
+  version: "1.0.0"                 # 真实版本号，checkver 用它做版本比对
+  # submit_version: "1.0"         # 可选，见下方「真实版本号与提交版本号」
   architecture:
     x64:
       url: https://example.com/app-1.0.0-x64.exe
@@ -256,7 +259,8 @@ autoupdate:
 | 字段 | 说明 |
 |------|------|
 | `id` | Winget 包标识符（格式：Publisher.AppName） |
-| `current_package.version` | 当前已知的最新版本 |
+| `current_package.version` | 当前已知的最新真实版本号，`check-version.ps1` 用它和远程版本比较 |
+| `current_package.submit_version` | 可选，实际提交到 winget-pkgs 的版本号；与 `version` 一致时可省略 |
 | `current_package.architecture` | 支持的架构及对应的下载信息，会自动更新 |
 | `checkver.url` | [GitHub/API/Web] 版本检查的目标 URL |
 | `checkver.regex` | [GitHub/API/Web] 从页面提取版本的正则表达式 |
@@ -269,6 +273,20 @@ autoupdate:
 | `autoupdate.architecture.[x86/x64/arm64]` | 自动更新的下载 URL 模板 |
 | `autoupdate.architecture.[x86/x64/arm64].jsonpath` | [API] 可选，从 checkver 数据提取下载 URL，支持遍历数组 |
 | `autoupdate.architecture.[x86/x64/arm64].match_url` | [GitHub] 可选，从 GitHub Release assets 按文件名正则匹配下载 URL |
+
+### 真实版本号与提交版本号
+
+部分软件的官方版本号带有构建号，而 winget-pkgs 的 manifest 只使用前三段。例如 Readdle.Spark 的 appcast 返回 `3.32.4.141552`，`autoupdate.version_format` 把它格式化为 `3.32.4` 后提交。此时两个字段各司其职：
+
+```yaml
+current_package:
+  version: "3.32.4.141552"   # 真实版本号，供下次版本检测比较
+  submit_version: "3.32.4"   # 提交到 winget-pkgs 的版本号
+```
+
+- `version` 恒由 `submit-winget.ps1` 写入 `checkver` 检测到的真实版本号。若改写成提交版本号，`3.32.4.141552` 会被判定为高于 `3.32.4`，导致每次检查都误报更新。
+- `submit_version` 是可选字段，仅当提交版本号与真实版本号不一致时写入；两者一致时脚本会自动省略该字段。
+- 两个版本号不一致时，`submit-winget.ps1` 会在 komac 提交 PR 成功后，把真实版本号补到 PR 标题末尾，形如 `New version: Readdle.Spark version 3.32.4 (3.32.4.141552)`，便于审核者对照官方版本。
 
 ## PR 提交说明
 

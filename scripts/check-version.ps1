@@ -165,8 +165,13 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
 
         Write-ThreadLog "Checking $id" -level "INFO"
 
+        # current_package.version 记录真实版本号，用于与远程检测版本比较；
+        # current_package.submit_version 仅记录提交到 winget 的版本号，不参与比较。
         $currentVersion = if ($config.current_package -and $config.current_package.version) { $config.current_package.version } elseif ($config.current_version) { $config.current_version } else { "0.0.0" }
         Write-ThreadLog " Current version (from config): $currentVersion" -level "INFO"
+        if ($config.current_package -and $config.current_package.submit_version) {
+            Write-ThreadLog " Submit version (from config): $($config.current_package.submit_version)" -level "INFO"
+        }
 
         $versionResult = Resolve-Version $config
         if ($versionResult -is [System.Management.Automation.PSCustomObject] -and $null -ne $versionResult.Version) {
