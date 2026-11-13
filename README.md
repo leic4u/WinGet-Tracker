@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/WinGet-Tracker-icon.png" width="260" alt="WinGet Tracker" />
+  <img src="./assets/WinGet-Tracker-icon.png" width="220" alt="WinGet Tracker" />
 
   <p><em>自动追踪任意网站的软件新版本，并向 <a href="https://github.com/microsoft/winget-pkgs">winget-pkgs</a> 提交更新 PR。</em></p>
 
