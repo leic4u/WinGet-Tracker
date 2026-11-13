@@ -130,12 +130,20 @@ function Resolve-Download($config, $version, $urlVersion = $null, $checkverData 
                 continue
             }
 
-            $downloadUrl = $templateUrl -replace '\$url[Vv]ersion', $urlVersion
-            $downloadUrl = $downloadUrl -replace '\$url[Mm]ajor', $major -replace '\$url[Mm]inor', $minor -replace '\$url[Pp]atch', $patch -replace '\$url[Bb]uild', $build
+            # 版本变量统一支持驼峰 / 全小写 / 蛇形三种写法：
+            # $urlVersion、$urlversion、$url_version（pkg 系列仅在 submit_version 模板中使用）
+            $downloadUrl = $templateUrl -replace '\$url[_]?[Vv]ersion', $urlVersion
+            $downloadUrl = $downloadUrl -replace '\$url[_]?[Mm]ajor', $major -replace '\$url[_]?[Mm]inor', $minor -replace '\$url[_]?[Pp]atch', $patch -replace '\$url[_]?[Bb]uild', $build
 
             # 保持原版的相对上下文变量
             $downloadUrl = $downloadUrl -replace '\$version', $version
             $downloadUrl = $downloadUrl -replace '\$major', $major -replace '\$minor', $minor -replace '\$patch', $patch -replace '\$build', $build
+
+            # 未被识别的变量会残留在 URL 里导致 404，直接跳过并告警，避免静默失败
+            if ($downloadUrl -match '\$[A-Za-z_]') {
+                Write-Warning "Unresolved template variable in download URL for $($arch): $downloadUrl"
+                continue
+            }
 
             # 根据 URL 推断文件类型
             $type = "exe"

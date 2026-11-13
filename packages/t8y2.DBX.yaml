@@ -11,7 +11,7 @@ current_package:
 checkver:
   url: "https://github.com/t8y2/dbx"
 autoupdate:
-  version_format: $version
+  submit_version: $version
   architecture:
     x64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_x64-setup.exe
     arm64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_arm64-setup.exe

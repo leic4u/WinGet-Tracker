@@ -5,6 +5,7 @@ if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
 
 Import-Module powershell-yaml
 
+. "$PSScriptRoot/config-fields.ps1"
 . "$PSScriptRoot/resolve-version.ps1"
 . "$PSScriptRoot/scan-url-version.ps1"
 . "$PSScriptRoot/resolve-download.ps1"
@@ -151,6 +152,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
     Set-Item -Path "Function:\Compare-Versions" -Value ([scriptblock]::Create($using:funcCompare))
 
     Import-Module powershell-yaml -ErrorAction SilentlyContinue
+    . "$scriptRoot/config-fields.ps1"
     . "$scriptRoot/resolve-version.ps1"
     . "$scriptRoot/scan-url-version.ps1"
     . "$scriptRoot/resolve-download.ps1"
@@ -165,12 +167,14 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
 
         Write-ThreadLog "Checking $id" -level "INFO"
 
-        # current_package.version 记录真实版本号，用于与远程检测版本比较；
+        # current_package.version（也可写 url_version）是比对基准；
+        # checkver 从 checkver.url 检测到的新版本称为 url_version（真实版本号）。
         # current_package.submit_version 仅记录提交到 winget 的版本号，不参与比较。
-        $currentVersion = if ($config.current_package -and $config.current_package.version) { $config.current_package.version } elseif ($config.current_version) { $config.current_version } else { "0.0.0" }
+        $currentVersion = Get-CurrentPackageVersion $config
         Write-ThreadLog " Current version (from config): $currentVersion" -level "INFO"
-        if ($config.current_package -and $config.current_package.submit_version) {
-            Write-ThreadLog " Submit version (from config): $($config.current_package.submit_version)" -level "INFO"
+        $configSubmitVersion = Get-ConfigField $config.current_package 'submit_version'
+        if ($configSubmitVersion) {
+            Write-ThreadLog " Submit version (from config): $configSubmitVersion" -level "INFO"
         }
 
         $versionResult = Resolve-Version $config
@@ -199,8 +203,8 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
             Write-ThreadLog " Skipped: Could not determine version" -level "ERROR"
         }
         else {
-            Write-ThreadLog " Remote version: $version" -level "INFO"
-            Write-ThreadLog " Comparing versions: current='$currentVersion' vs remote='$version'" -level "INFO"
+            Write-ThreadLog " Detected url_version: $version" -level "INFO"
+            Write-ThreadLog " Comparing versions: current_package.version='$currentVersion' vs url_version='$version'" -level "INFO"
 
             if (Compare-Versions -v1 $version -v2 $currentVersion) {
                 # 检查解析后的 URL 是否与当前 URL 匹配，以避免重复更新
@@ -219,7 +223,7 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                             $isMatchUrlTemplate = ($template -is [System.Collections.IDictionary] -and $template.match_url)
 
                             # 检查通用版本变量，或 match_url 匹配类模板
-                            if ($isMatchUrlTemplate -or $templateUrl -match '\$(version|major|minor|patch|build|url[Vv]ersion|url[Mm]ajor|url[Mm]inor|url[Pp]atch|url[Bb]uild)') {
+                            if ($isMatchUrlTemplate -or $templateUrl -match '\$(version|major|minor|patch|build|url[_]?[Vv]ersion|url[_]?[Mm]ajor|url[_]?[Mm]inor|url[_]?[Pp]atch|url[_]?[Bb]uild|pkg[_]?[Vv]ersion|pkg[_]?[Mm]ajor|pkg[_]?[Mm]inor|pkg[_]?[Pp]atch|pkg[_]?[Bb]uild)') {
                                 $hasVariables = $true
                                 # 保护架构属性访问的安全措施
                                 $currentArch = if ($config.current_package.architecture -is [System.Collections.IDictionary]) { $config.current_package.architecture[$arch] } else { $config.current_package.architecture.$arch }
@@ -261,12 +265,11 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
                     Write-ThreadLog " Skipping update: Resolved URL matches current URL even though version string differs" -level "INFO"
                 } else {
                     $update = [PSCustomObject]@{
-                        id              = $id
-                        version         = $version
-                        url_version     = $urlVersion
-                        current_version = $currentVersion
-                        file            = $pkg.Name
-                        data            = $checkverData
+                        id          = $id
+                        version     = $currentVersion  # 比对基准：current_package 里已记录的真实版本
+                        url_version = $version         # checkver 从 checkver.url 检测到的新真实版本
+                        file        = $pkg.Name
+                        data        = $checkverData
                     }
                     Write-ThreadLog " UPDATE AVAILABLE: $currentVersion -> $version" -level "WARNING"
                 }
@@ -310,8 +313,8 @@ $reportUpdates = @()
 foreach ($u in $result) {
     $reportUpdates += @{
         id             = $u.id
-        currentVersion = [string]$u.current_version
-        newVersion     = [string]$u.version
+        currentVersion = [string]$u.version
+        newVersion     = [string]$u.url_version
         status         = "pending"
         prUrl          = ""
         error          = ""

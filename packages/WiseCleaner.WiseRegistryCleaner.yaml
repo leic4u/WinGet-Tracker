@@ -9,7 +9,7 @@ checkver:
   url: https://www.wisecleaner.com/software_update/getinfo_v6.php?p_id=5
   regex: WRCFree_(\d+\.\d+\.\d+\.\d+)
 autoupdate:
-  version_format: $pkgMajor.$pkgMinor.$pkgPatch
+  submit_version: $pkgMajor.$pkgMinor.$pkgPatch
   architecture:
     x86: https://downloads.wisecleaner.com/soft/WRCFree_$major.$minor.$patch.$build.exe
 pr: https://github.com/microsoft/winget-pkgs/pull/387984

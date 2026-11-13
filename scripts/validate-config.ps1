@@ -1,4 +1,6 @@
-﻿function Test-PackageConfig {
+﻿. "$PSScriptRoot/config-fields.ps1"
+
+function Test-PackageConfig {
     param(
         [object]$config,
         [string]$fileName
@@ -72,15 +74,16 @@
         }
     }
 
-    # 验证可选的 current_package.submit_version
+    # 验证可选的 current_package.submit_version（键名支持蛇形 / 驼峰）
     # version 记录真实版本号，submit_version 记录提交到 winget 的版本号；
     # 两者相同时该字段冗余，submit-winget.ps1 会自动省略它。
-    if ($config.current_package -and $null -ne $config.current_package.submit_version) {
-        $submitVersion = [string]$config.current_package.submit_version
+    $submitVersion = Get-ConfigField $config.current_package 'submit_version'
+    $currentVersion = Get-CurrentPackageVersion $config
+    if ($null -ne $submitVersion) {
         if ([string]::IsNullOrWhiteSpace($submitVersion)) {
             $errors += "Empty optional field: 'current_package.submit_version'"
         }
-        elseif ($config.current_package.version -and $submitVersion -eq [string]$config.current_package.version) {
+        elseif ($submitVersion -eq $currentVersion) {
             $warnings += "'current_package.submit_version' equals 'current_package.version'; the field can be removed"
         }
     }

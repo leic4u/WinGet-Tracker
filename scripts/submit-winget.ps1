@@ -1,4 +1,5 @@
 Import-Module powershell-yaml
+. "$PSScriptRoot/config-fields.ps1"
 . "$PSScriptRoot/resolve-download.ps1"
 . "$PSScriptRoot/calc-hash.ps1"
 . "$PSScriptRoot/check-existing-pr.ps1"
@@ -103,8 +104,9 @@ function Get-ManifestVersion {
     )
 
     $manifestVersion = $version
+    $formatTemplate = Get-SubmitVersionFormat $config
 
-    if ($config.autoupdate.version_format) {
+    if ($formatTemplate) {
         $pkgBaseVersion = if ($detectedVersion) { $detectedVersion } else { $urlVersion }
         $vParts = $pkgBaseVersion -split '\.'
         $rMajor = $vParts[0]
@@ -118,13 +120,18 @@ function Get-ManifestVersion {
         $uPatch = if ($uParts.Count -gt 2) { $uParts[2] } else { '0' }
         $uBuild = if ($uParts.Count -gt 3) { $uParts[3] } else { '0' }
 
-        $vTemplate = $config.autoupdate.version_format
-        $manifestVersion = $vTemplate -replace '\$url[Vv]ersion', $urlVersion
-        $manifestVersion = $manifestVersion -replace '\$url[Mm]ajor', $uMajor -replace '\$url[Mm]inor', $uMinor -replace '\$url[Pp]atch', $uPatch -replace '\$url[Bb]uild', $uBuild
-        $manifestVersion = $manifestVersion -replace '\$pkg[Vv]ersion', $pkgBaseVersion
-        $manifestVersion = $manifestVersion -replace '\$pkg[Mm]ajor', $rMajor -replace '\$pkg[Mm]inor', $rMinor -replace '\$pkg[Pp]atch', $rPatch -replace '\$pkg[Bb]uild', $rBuild
+        # 与 URL 模板一致：url / pkg 系列均支持驼峰、全小写、蛇形三种写法
+        $manifestVersion = $formatTemplate -replace '\$url[_]?[Vv]ersion', $urlVersion
+        $manifestVersion = $manifestVersion -replace '\$url[_]?[Mm]ajor', $uMajor -replace '\$url[_]?[Mm]inor', $uMinor -replace '\$url[_]?[Pp]atch', $uPatch -replace '\$url[_]?[Bb]uild', $uBuild
+        $manifestVersion = $manifestVersion -replace '\$pkg[_]?[Vv]ersion', $pkgBaseVersion
+        $manifestVersion = $manifestVersion -replace '\$pkg[_]?[Mm]ajor', $rMajor -replace '\$pkg[_]?[Mm]inor', $rMinor -replace '\$pkg[_]?[Pp]atch', $rPatch -replace '\$pkg[_]?[Bb]uild', $rBuild
         $manifestVersion = $manifestVersion -replace '\$version', $urlVersion
         $manifestVersion = $manifestVersion -replace '\$major', $uMajor -replace '\$minor', $uMinor -replace '\$patch', $uPatch -replace '\$build', $uBuild
+
+        # 残留变量说明模板写错了，直接阻止提交，避免把字面量当成版本号交给 komac
+        if ($manifestVersion -match '\$[A-Za-z_]') {
+            throw "Unresolved template variable in submit_version format: $manifestVersion"
+        }
     } elseif ($detectedVersion -and $detectedVersion -ne $version) {
         $manifestVersion = $detectedVersion
     }
@@ -169,13 +176,10 @@ $reportCheckErrors = New-Object System.Collections.Generic.List[object]
 function Get-PackageCurrentVersion {
     param($Config)
 
-    if ($Config.current_package -and $Config.current_package.version) {
-        return [string]$Config.current_package.version
-    }
-    if ($Config.current_version) {
-        return [string]$Config.current_version
-    }
-    return ""
+    # 与 check-version.ps1 保持一致：version / url_version 等价读取
+    $value = Get-CurrentPackageVersion $Config
+    if ($value -eq "0.0.0") { return "" }
+    return $value
 }
 
 function Add-ReportItem {
@@ -334,7 +338,7 @@ foreach ($item in $updates) {
         $file = "$PSScriptRoot/../packages/$($item.file)"
         if (-not (Test-Path $file)) {
             Write-Log "Warning: Package config not found: $file"
-            Add-ReportItem -Id $item.id -NewVersion ([string]$item.version)
+            Add-ReportItem -Id $item.id -NewVersion (Get-UpdateDetectedVersion $item)
             Set-ReportStatus -Id $item.id -Status "error" -Error "包配置文件不存在：$($item.file)"
             Save-NotificationReport -Path $reportFile
             continue
@@ -342,8 +346,10 @@ foreach ($item in $updates) {
 
         $config = Get-Content $file | ConvertFrom-Yaml
         $id = if ($config.id) { $config.id } else { $item.id }
-        $version = $item.version  # checkver 检测到的真实版本号，写入 current_package.version
-        $urlVersion = if ($item.PSObject.Properties['url_version']) { $item.url_version } else { $version }
+        # url_version 是 checkver 从 checkver.url 检测到的真实版本号；
+        # 脚本内部仍用 $version 表示它，保持 PR 查重 / YAML 回写 / 标题补充逻辑不变。
+        $version = Get-UpdateDetectedVersion $item
+        $urlVersion = $version
         $checkverData = if ($item.PSObject.Properties['data']) { $item.data } else { $null }
 
         Add-ReportItem -Id $id -CurrentVersion (Get-PackageCurrentVersion $config) -NewVersion ([string]$version)
@@ -362,7 +368,7 @@ foreach ($item in $updates) {
         $versionReplaced = $false
 
         if ($manifestVersion -ne $version) {
-            Write-Log "  Formatted manifest version using version_format: $manifestVersion"
+            Write-Log "  Computed submit_version from template: $manifestVersion"
         }
 
         if ($exists) {
@@ -490,10 +496,10 @@ foreach ($item in $updates) {
             # 决定提交到 winget 的 manifest 版本号
             $manifestVersion = Get-ManifestVersion -config $config -version $version -urlVersion $urlVersion -detectedVersion $detectedVersion
 
-            if ($config.autoupdate.version_format) {
-                Write-Log "  Formatted manifest version using version_format: $manifestVersion"
+            if (Get-SubmitVersionFormat $config) {
+                Write-Log "  Formatted submit_version using template: $manifestVersion"
             } elseif ($detectedVersion -and $detectedVersion -ne $version) {
-                Write-Log "  No version_format found, using raw installer built-in version: $manifestVersion"
+                Write-Log "  No submit_version template found, using raw installer built-in version: $manifestVersion"
             }
 
             Write-Log "  Final manifest version: $manifestVersion"
@@ -701,7 +707,7 @@ foreach ($item in $updates) {
         }
     } catch {
         Write-Log "Error processing $($item.id): $_"
-        Add-ReportItem -Id $item.id -NewVersion ([string]$item.version)
+        Add-ReportItem -Id $item.id -NewVersion (Get-UpdateDetectedVersion $item)
         Set-ReportStatus -Id $item.id -Status "error" -Error (Limit-ReportText "$_" 300)
         $hasFatalError = $true
     }
