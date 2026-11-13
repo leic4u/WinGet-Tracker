@@ -1,9 +1,11 @@
 id: nilaoda.N_m3u8DL-RE
 current_package:
-  version: "127.0.0.1"
+  version: "0.6.0-beta"
   architecture:
 checkver:
-  url: "https://github.com/nilaoda/N_m3u8DL-RE"
+  url: "https://api.github.com/repos/nilaoda/N_m3u8DL-RE/releases/latest"
+  jsonpath: tag_name
+  regex: '^v?(?<version>\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)$'
 autoupdate:
   architecture:
     x64:

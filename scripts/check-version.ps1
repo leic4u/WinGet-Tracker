@@ -199,6 +199,15 @@ $parallelResults = $packages | ForEach-Object -ThrottleLimit 5 -Parallel {
             }
         }
 
+        # 兜底校验：无论版本号来自 API、正则还是网页扫描，只要长得像
+        # 环回 / 私有 IP 一律拒绝，避免把 127.0.0.1 这类值写回 current_package.version。
+        if ($version -and -not (Test-PlausibleVersion $version)) {
+            Write-ThreadLog " Rejected implausible version string (looks like an IP address): $version" -level "WARNING"
+            $version = $null
+            $urlVersion = $null
+            $checkverData = $null
+        }
+
         if (-not $version) {
             Write-ThreadLog " Skipped: Could not determine version" -level "ERROR"
         }

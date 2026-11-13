@@ -158,6 +158,16 @@ function Resolve-Version($config) {
 
             # 构建请求头
             $headers = @{}
+            # GitHub API 匿名请求限流很严（60 次/小时/出口 IP），一旦 403 就会
+            # 回退到网页扫描，页面里的 IP 地址可能被误当成版本号。
+            # 这里复用工作流里的 WINGET_TOKEN 做认证，并补上 GitHub 要求的 User-Agent。
+            if ($url -match '^https://api\.github\.com/') {
+                $headers["User-Agent"] = "winget-tracker"
+                $headers["Accept"] = "application/vnd.github+json"
+                if ($env:WINGET_TOKEN) {
+                    $headers["Authorization"] = "token $($env:WINGET_TOKEN)"
+                }
+            }
             if ($config.checkver.headers) {
                 foreach ($key in $config.checkver.headers.Keys) {
                     $headers[$key] = $config.checkver.headers[$key]

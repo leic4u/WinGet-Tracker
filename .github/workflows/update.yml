@@ -38,6 +38,8 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/check-version.ps1
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
 
       - name: Submit updates
         shell: pwsh
