@@ -335,6 +335,8 @@ Load-NotificationReport -Path $reportFile
 
 foreach ($item in $updates) {
     try {
+        # 本轮若无法确认 PR 确实创建，就必须保留旧版本号，禁止回写 current_package
+        $submissionFailed = $false
         $file = "$PSScriptRoot/../packages/$($item.file)"
         if (-not (Test-Path $file)) {
             Write-Log "Warning: Package config not found: $file"
@@ -545,12 +547,17 @@ foreach ($item in $updates) {
             Write-Log "Step 4: Submitting to winget-pkgs..."
 
             # 构建 komac 参数数组
+            # 查重统一由本脚本 Step 1 / Step 3 负责（--state all，仅 OPEN/MERGED 跳过）。
+            # komac 自身的查重不带 is:open，会把已 CLOSED 的同版本 PR 也算作「已存在」；
+            # 而 CI 环境下它无法交互确认，会直接 return Ok(()) —— 退出码 0 却什么都不做。
+            # 显式跳过 komac 查重，才能重提被关闭过的版本。
             $komacArgs = @(
                 "update",
                 $id,
                 "--version", $manifestVersion,
                 "--token", $env:WINGET_TOKEN,
                 "--submit",
+                "--skip-pr-check",
                 "--created-with", "WinGet Tracker",
                 "--created-with-url", "https://github.com/leic4u/winget-tracker"
             )
@@ -575,65 +582,74 @@ foreach ($item in $updates) {
             $submitSuccess = $false
             $packageNotFound = $false
 
-            while (-not $submitSuccess -and $retryCount -lt $maxRetries) {
+            while (-not $submitSuccess -and -not $submissionFailed -and $retryCount -lt $maxRetries) {
                 try {
                     $komacPath = "$env:LOCALAPPDATA\Programs\Komac\bin\komac.exe"
                     if (-not (Test-Path $komacPath)) {
                         $komacPath = "komac"
                     }
                     $komacOutput = & $komacPath @komacArgs 2>&1
+                    $komacExitCode = $LASTEXITCODE
                     $outputStr = $komacOutput | Out-String
                     Write-Host $outputStr
 
-                    if ($LASTEXITCODE -eq 0) {
-                        $submitSuccess = $true
-                        Write-Log "  Successfully submitted $id $manifestVersion"
-
-                        # 优先使用 komac 输出中直接提供的 PR URL，这是当前脚本提交的 PR，最准确
-                        $prUrlMatch = [regex]::Match($outputStr, 'https://github\.com/microsoft/winget-pkgs/pull/\d+')
-                        if ($prUrlMatch.Success) {
-                            $prUrl = $prUrlMatch.Value
-                            Write-Log "  Submitted PR URL from komac output: $prUrl"
-                        } else {
-                            # 回退：查找刚提交的 PR 并获取其 URL
-                            try {
-                                $env:GH_TOKEN = $env:WINGET_TOKEN
-                                $searchQuery = "$id $manifestVersion"
-                                $prsJson = gh pr list `
-                                    --repo microsoft/winget-pkgs `
-                                    --state open `
-                                    --search "$searchQuery" `
-                                    --author "@me" `
-                                    --json number,title,url `
-                                    2>&1
-                                $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-                                if ($prs -and $prs.Count -gt 0) {
-                                    $submittedPr = $prs[0]
-                                    $prUrl = if ($submittedPr.url) { $submittedPr.url } else { "https://github.com/microsoft/winget-pkgs/pull/$($submittedPr.number)" }
-                                    Write-Log "  Submitted PR URL from gh search: $prUrl"
-                                } else {
-                                    Write-Log "  Warning: Could not find the submitted PR URL"
-                                }
-                            } catch {
-                                Write-Log "  Warning: Failed to retrieve submitted PR URL: $_"
-                            }
-                        }
-
-                        # submit_version 与 version 不一致时，把真实版本号补到 PR 标题末尾
-                        if ($versionReplaced) {
-                            Write-Log "  Updating PR title to include real version $version..."
-                            $titleUpdated = Update-SubmittedPRTitle -PrUrl $prUrl -PrInfo $submittedPr -Id $id -SubmitVersion $submitVersion -RealVersion $version
-                            if (-not $titleUpdated) {
-                                Add-ReportWarning -Id $id -Message "PR 标题补充真实版本号 $version 失败"
-                            }
-                        }
-                    } else {
+                    if ($komacExitCode -ne 0) {
                         if ($outputStr -match "does not exist in microsoft/winget-pkgs") {
                             Write-Log "  Package $id does not exist in winget-pkgs. Skipping PR submission."
                             $packageNotFound = $true
                             break
-                        } else {
-                            throw "komac exited with code $LASTEXITCODE"
+                        }
+                        throw "komac exited with code $komacExitCode"
+                    }
+
+                    # 退出码 0 不等于提交成功：komac 命中已存在的 PR 时会在 CI 下静默返回，
+                    # 不生成 manifest、不开 PR、也不输出 PR URL。必须以 PR URL 作为提交凭据。
+                    $prUrlMatch = [regex]::Match($outputStr, 'https://github\.com/microsoft/winget-pkgs/pull/\d+')
+                    if ($prUrlMatch.Success) {
+                        $prUrl = $prUrlMatch.Value
+                        Write-Log "  Submitted PR URL from komac output: $prUrl"
+                    } else {
+                        # 回退：komac 未打印 PR URL 时，查找本次刚创建的 PR
+                        try {
+                            $env:GH_TOKEN = $env:WINGET_TOKEN
+                            $searchQuery = "$id $manifestVersion"
+                            $prsJson = gh pr list `
+                                --repo microsoft/winget-pkgs `
+                                --state open `
+                                --search "$searchQuery" `
+                                --author "@me" `
+                                --json number,title,url `
+                                2>&1
+                            $prs = $prsJson | ConvertFrom-Json -ErrorAction Stop
+                            if ($prs -and $prs.Count -gt 0) {
+                                $submittedPr = $prs[0]
+                                $prUrl = if ($submittedPr.url) { $submittedPr.url } else { "https://github.com/microsoft/winget-pkgs/pull/$($submittedPr.number)" }
+                                Write-Log "  Submitted PR URL from gh search: $prUrl"
+                            }
+                        } catch {
+                            Write-Log "  Warning: Failed to retrieve submitted PR URL: $_"
+                        }
+                    }
+
+                    if (-not $prUrl) {
+                        # 拿不到任何 PR 凭据即判定为未提交。这是确定性失败，重试没有意义。
+                        # 关键：不能回写 current_package.version，否则该版本会被永久跳过。
+                        Write-Log "  Error: komac exited with code 0 but produced no PR URL; treating submission as FAILED"
+                        Set-ReportStatus -Id $id -Status "error" -Error "komac 返回成功但未提供 PR URL（疑似静默跳过提交），未回写版本号，请检查 komac 输出"
+                        $submissionFailed = $true
+                        $hasFatalError = $true
+                        break
+                    }
+
+                    $submitSuccess = $true
+                    Write-Log "  Successfully submitted $id $manifestVersion"
+
+                    # submit_version 与 version 不一致时，把真实版本号补到 PR 标题末尾
+                    if ($versionReplaced) {
+                        Write-Log "  Updating PR title to include real version $version..."
+                        $titleUpdated = Update-SubmittedPRTitle -PrUrl $prUrl -PrInfo $submittedPr -Id $id -SubmitVersion $submitVersion -RealVersion $version
+                        if (-not $titleUpdated) {
+                            Add-ReportWarning -Id $id -Message "PR 标题补充真实版本号 $version 失败"
                         }
                     }
                 } catch {
@@ -668,8 +684,10 @@ foreach ($item in $updates) {
         # ========================================
         # 第五步：更新本地 YAML 文件
         # ========================================
-        # 只有在不需要提交、提交成功、或者确认包不在仓库时，才更新本地 YAML
-        if (-not $shouldSubmit -or $submitSuccess -or $packageNotFound) {
+        # 只有在确认 PR 已存在、提交确实成功、或确认包不在仓库时，才更新本地 YAML。
+        # 提交未确认（komac 静默跳过、查重异常等）时必须保留旧版本号，
+        # 否则配置会超前于 winget-pkgs，该版本此后会被判定为 Up to date 而永久漏掉。
+        if (-not $submissionFailed -and (-not $shouldSubmit -or $submitSuccess -or $packageNotFound)) {
             Write-Log "Step 5: Updating current_package in $file"
             try {
                 Update-PackageCurrentInfo -filePath $file -realVersion $version -submitVersion $manifestVersion -downloads $processedDownloads

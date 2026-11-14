@@ -28,8 +28,7 @@ function Test-WingetPRExists {
 
         # 检查是否是有效的 JSON（不是错误信息）
         if (-not $prsJson -or $prsJson.GetType().Name -eq "ErrorRecord") {
-            Write-Warning "Failed to execute gh command: $($prsJson | Out-String)"
-            return $false
+            throw "PR 查重失败：gh 命令未返回有效输出（$($prsJson | Out-String)）"
         }
 
         # 将输出转换为字符串并清理
@@ -39,15 +38,18 @@ function Test-WingetPRExists {
         # 尝试提取 JSON 部分（移除可能的警告信息）
         $jsonStart = $outputStr.IndexOf('[')
         $jsonEnd = $outputStr.LastIndexOf(']')
-
-        if ($jsonStart -ge 0 -and $jsonEnd -gt $jsonStart) {
-            # 提取 JSON 数组部分
-            $jsonStr = $outputStr.Substring($jsonStart, $jsonEnd - $jsonStart + 1)
-            $data = $jsonStr | ConvertFrom-Json -ErrorAction SilentlyContinue
+        $jsonStr = if ($jsonStart -ge 0 -and $jsonEnd -gt $jsonStart) {
+            $outputStr.Substring($jsonStart, $jsonEnd - $jsonStart + 1)
+        } else {
+            $outputStr
         }
-        else {
-            # 直接尝试解析
-            $data = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+
+        # 解析失败不等于「没有 PR」：komac 自身的查重已被跳过，
+        # 这里放行会导致重复提交，因此直接抛出，由调用方记为 error 并跳过该包。
+        try {
+            $data = $jsonStr | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            throw "PR 查重失败，gh 输出无法解析为 JSON：$($_.Exception.Message)"
         }
 
         # 遍历检查结果
@@ -79,8 +81,9 @@ function Test-WingetPRExists {
         return $false
     }
     catch {
-        Write-Warning "Failed to check existing PRs: $_"
-        return $false
+        # 查重结果不确定时一律中止该包的处理：不能回写版本号，也不能提交，
+        # 否则可能在已有 OPEN PR 的情况下重复提交，或把版本号错误推进。
+        throw "PR 查重失败，为防重复提交已中止：$($_.Exception.Message)"
     }
     finally {
         # 清理环境变量

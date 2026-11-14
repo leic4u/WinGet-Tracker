@@ -29,6 +29,7 @@ WinGet Tracker 是一套运行在 GitHub Actions 上的 PowerShell 自动化流�
 | 下载解析 | URL 模板变量替换、jsonpath 提取、GitHub Release assets 按文件名匹配 |
 | 完整性校验 | 下载安装包并计算 SHA256（带重试），从 EXE / MSI / MSIX 提取内置版本号 |
 | 自动提交 | 重复 PR 检查 → Komac 提交 PR → 必要时补充 PR 标题 → 回写 YAML 配置 → 自动 Git 提交 |
+| 提交确认 | 以 PR URL 作为提交成功的必要凭据；查重失败或未拿到 PR URL 时记为错误并保留旧版本号，避免该版本被永久跳过 |
 | 版本防误报 | 真实版本号与提交版本号分离（`version` / `submit_version`），避免带构建号的版本每次被误判为更新 |
 | 结果通知 | 运行结束后推送 Telegram 富文本报告，包含更新、PR、错误与跳过项，并支持格式降级 |
 | 仓库维护 | 自动同步 fork 上游、清理已合并 PR 分支、完整日志便于追踪调试 |
