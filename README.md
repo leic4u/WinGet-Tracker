@@ -275,7 +275,7 @@ flowchart TD
 - **版本检查异常**：`check-version.ps1` 中检查失败的包
 - **已清理分支**：包名 / 版本 / 分支名（由 `cleanup-merged-prs.ps1` 追加到 `notification.json`）
 
-报告通过 Bot API 的 `sendRichMessage` + Rich Markdown 发送，包名、版本、分支名、PR 地址与错误信息均为真正的表格：
+报告时间统一显示为东八区（UTC+8，`notification.json` 里的 `generatedAt` 仍保留 UTC ISO 格式）。报告通过 Bot API 的 `sendRichMessage` + Rich Markdown 发送，包名、版本、分支名、PR 地址与错误信息均为真正的表格：
 
 ```markdown
 ### 📦 检查到新版本（3）

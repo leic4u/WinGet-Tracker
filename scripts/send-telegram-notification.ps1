@@ -526,18 +526,36 @@ $skippedItems = @($items | Where-Object { $_.status -eq 'skipped' })
 $pendingItems = @($items | Where-Object { $_.status -eq 'pending' })
 $warningItems = @($items | Where-Object { $_.warnings.Count -gt 0 })
 
+# 报告中的 generatedAt 是 UTC ISO 字符串，展示时统一换算为东八区（中国标准时间，全年 UTC+8，无夏令时）。
+# 使用固定偏移而不是 TimeZoneInfo ID，避免 Windows(.NET Framework) 与 pwsh/.NET 的时区 ID 差异。
+$eastEightOffset = [TimeSpan]::FromHours(8)
 $generatedAtValue = Get-PropertyValue -Object $report -Name 'generatedAt'
-if ($generatedAtValue -is [datetime]) {
-    # PowerShell 7 的 ConvertFrom-Json 会自动把 ISO 时间字符串转成 DateTime
-    $generatedAt = $generatedAtValue.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
-}
-else {
-    $generatedAt = Get-SafeText $generatedAtValue
-    if (-not $generatedAt) {
-        $generatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+try {
+    if ($generatedAtValue -is [datetime]) {
+        # PowerShell 7 的 ConvertFrom-Json 会自动把 ISO 时间字符串转成 DateTime
+        $generatedAtOffset = [DateTimeOffset]::new($generatedAtValue.ToUniversalTime())
     }
-    $generatedAt = ($generatedAt -replace 'T', ' ' -replace 'Z', '').Trim()
+    else {
+        $rawGeneratedAt = Get-SafeText $generatedAtValue
+        if (-not $rawGeneratedAt) {
+            $generatedAtOffset = [DateTimeOffset]::UtcNow
+        }
+        else {
+            $generatedAtOffset = [DateTimeOffset]::Parse(
+                $rawGeneratedAt,
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::AssumeUniversal -bor [Globalization.DateTimeStyles]::AdjustToUniversal
+            )
+        }
+    }
 }
+catch {
+    # 报告里的时间无法解析时退回当前 UTC 时间，保证通知仍能发出
+    $generatedAtOffset = [DateTimeOffset]::UtcNow
+}
+
+$generatedAt = $generatedAtOffset.ToOffset($eastEightOffset).ToString("yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
 
 $summary = if ($items.Count -gt 0) { "共检测到 $($items.Count) 个更新" } else { "本次未检测到版本更新" }
 $summaryDetails = New-Object System.Collections.Generic.List[string]
@@ -685,13 +703,13 @@ if ($validCleanedBranches.Count -gt 0) {
 # 抬头与页脚
 $preambleRich = @(
     "🚀 **WinGet Tracker 运行报告**",
-    "🕒 时间：$(Format-RichMarkdownInline $generatedAt) UTC",
+    "🕒 时间：$(Format-RichMarkdownInline $generatedAt) UTC+8",
     "🔍 $(Format-RichMarkdownInline $summary)"
 ) -join "`n"
 
 $preambleLegacy = @(
     "🚀 *WinGet Tracker 运行报告*",
-    "🕒 时间：$(ConvertTo-MarkdownV2Escaped $generatedAt) UTC",
+    "🕒 时间：$(ConvertTo-MarkdownV2Escaped $generatedAt) $(ConvertTo-MarkdownV2Escaped 'UTC+8')",
     "🔍 $(ConvertTo-MarkdownV2Escaped $summary)"
 ) -join "`n"
 
