@@ -3,8 +3,9 @@
     通过 Telegram Bot 发送 WinGet Tracker 运行报告。
 
 .DESCRIPTION
-    读取 check-version.ps1 / submit-winget.ps1 生成的 notification.json，
-    汇总「检查到新版本」「已提交 PR」「已存在 PR」「提交出错」等信息，并发送到 Telegram。
+    读取 check-version.ps1 / submit-winget.ps1 / cleanup-merged-prs.ps1 生成的 notification.json，
+    汇总「检查到新版本」「已提交 PR」「已存在 PR」「提交出错」「已清理分支」等信息，并发送到 Telegram。
+    只要检测到更新、提交 PR、版本检查异常，或本轮清理掉了任意分支，就会发送报告。
 
     发送方式（自动降级）：
       1. sendRichMessage + Rich Markdown（兼容 GFM，支持真正的表格语法 | a | b |）
@@ -472,6 +473,7 @@ catch {
 
 $updates = @((Get-PropertyValue -Object $report -Name 'updates' -Default @()))
 $checkErrors = @((Get-PropertyValue -Object $report -Name 'checkErrors' -Default @()))
+$cleanedBranches = @((Get-PropertyValue -Object $report -Name 'cleanedBranches' -Default @()))
 
 $items = New-Object System.Collections.Generic.List[object]
 foreach ($update in $updates) {
@@ -500,8 +502,18 @@ foreach ($checkError in $checkErrors) {
     $validCheckErrors.Add($checkError)
 }
 
-if ($items.Count -eq 0 -and $validCheckErrors.Count -eq 0) {
-    Write-Host "报告中没有检测到更新，也无需报告的异常，跳过通知。"
+$validCleanedBranches = New-Object System.Collections.Generic.List[object]
+foreach ($cleaned in $cleanedBranches) {
+    if ($null -eq $cleaned) { continue }
+    $validCleanedBranches.Add([PSCustomObject]@{
+            id      = Get-SafeText (Get-PropertyValue -Object $cleaned -Name 'id')
+            version = Get-SafeText (Get-PropertyValue -Object $cleaned -Name 'version')
+            branch  = Get-SafeText (Get-PropertyValue -Object $cleaned -Name 'branch')
+        })
+}
+
+if ($items.Count -eq 0 -and $validCheckErrors.Count -eq 0 -and $validCleanedBranches.Count -eq 0) {
+    Write-Host "报告中没有检测到更新、没有清理记录，也无需报告的异常，跳过通知。"
     exit 0
 }
 
@@ -527,13 +539,14 @@ else {
     $generatedAt = ($generatedAt -replace 'T', ' ' -replace 'Z', '').Trim()
 }
 
-$summary = "共检测到 $($items.Count) 个更新"
+$summary = if ($items.Count -gt 0) { "共检测到 $($items.Count) 个更新" } else { "本次未检测到版本更新" }
 $summaryDetails = New-Object System.Collections.Generic.List[string]
 if ($submittedItems.Count -gt 0) { $summaryDetails.Add("已提交 $($submittedItems.Count)") }
 if ($existingItems.Count -gt 0) { $summaryDetails.Add("已存在 $($existingItems.Count)") }
 if ($errorItems.Count -gt 0) { $summaryDetails.Add("出错 $($errorItems.Count)") }
 if ($skippedItems.Count -gt 0) { $summaryDetails.Add("已跳过 $($skippedItems.Count)") }
 if ($pendingItems.Count -gt 0) { $summaryDetails.Add("未处理 $($pendingItems.Count)") }
+if ($validCleanedBranches.Count -gt 0) { $summaryDetails.Add("已清理 $($validCleanedBranches.Count) 个分支") }
 if ($summaryDetails.Count -gt 0) {
     $summary += "（" + ($summaryDetails -join "，") + "）"
 }
@@ -648,6 +661,23 @@ if ($validCheckErrors.Count -gt 0) {
     $sections.Add([PSCustomObject]@{
             title   = "⚠️ 版本检查异常（$($validCheckErrors.Count)）"
             headers = @('包名', '错误信息')
+            rows    = $rows.ToArray()
+        })
+}
+
+# 9. 已清理分支
+if ($validCleanedBranches.Count -gt 0) {
+    $rows = New-Object System.Collections.Generic.List[object]
+    foreach ($cleaned in $validCleanedBranches) {
+        $rows.Add([string[]]@(
+                (Format-CellValue $cleaned.id),
+                (Format-CellValue $cleaned.version),
+                (Format-CellValue $cleaned.branch)
+            ))
+    }
+    $sections.Add([PSCustomObject]@{
+            title   = "🗑️ 已清理分支（$($validCleanedBranches.Count)）"
+            headers = @('包名', '版本', '分支名')
             rows    = $rows.ToArray()
         })
 }

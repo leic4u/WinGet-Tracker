@@ -232,7 +232,7 @@ current_package:
 | `send-telegram-notification.ps1` | 通知 | 读取 `notification.json`，通过 Telegram Bot 发送报告 |
 | `config-fields.ps1` | 维护 | 统一读取配置版本字段，兼容蛇形 / 驼峰键名 |
 | `validate-config.ps1` | 维护 | 校验配置文件格式 |
-| `cleanup-merged-prs.ps1` | 维护 | 清理已合并 PR 的分支（使用 Komac） |
+| `cleanup-merged-prs.ps1` | 维护 | 白名单清理已合并 / 已关闭 PR 的 komac 分支（GitHub API，手工分支不动） |
 | `sync-winget-fork.ps1` | 维护 | 将 fork 的 winget-pkgs 主分支同步到上游 |
 
 ## 工作流程
@@ -265,7 +265,7 @@ flowchart TD
 
 ## Telegram 通知
 
-工作流结束后，只要检测到更新，就会推送一份富文本报告：
+工作流结束后，只要检测到新版本、提交了 PR、版本检查失败，或清理掉了任意分支，就会推送一份富文本报告：
 
 - **检查到新版本**：包名 / 当前版本 / 新版本
 - **已提交 PR**：包名 / PR 链接
@@ -273,14 +273,20 @@ flowchart TD
 - **提交 PR 出错**：包名 / 错误信息（如安装包下载失败）
 - **警告 / 已跳过 / 未处理**：其他需要关注的情况
 - **版本检查异常**：`check-version.ps1` 中检查失败的包
+- **已清理分支**：包名 / 版本 / 分支名（由 `cleanup-merged-prs.ps1` 追加到 `notification.json`）
 
-报告通过 Bot API 的 `sendRichMessage` + Rich Markdown 发送，包名、版本、PR 地址与错误信息均为真正的表格：
+报告通过 Bot API 的 `sendRichMessage` + Rich Markdown 发送，包名、版本、分支名、PR 地址与错误信息均为真正的表格：
 
 ```markdown
 ### 📦 检查到新版本（3）
 | 包名 | 当前版本 | 新版本 |
 |:---|:---|:---|
 | mg-chao.snow-shot | 1.1.7-beta | 1.1.8 |
+
+### 🗑️ 已清理分支（1）
+| 包名 | 版本 | 分支名 |
+|:---|:---|:---|
+| XiaoYouChR.GhostDownloader | 4.5.3 | XiaoYouChR.GhostDownloader-4.5.3-3D774A6B57F34B5FA02D694C5337704E |
 ```
 
 若当前 Bot API / 客户端不支持富文本，脚本会自动降级：`sendRichMessage` → `sendMessage` + MarkdownV2（等宽代码块模拟表格）→ 纯文本，确保通知不会因格式问题丢失。
