@@ -1,7 +1,6 @@
 id: Syngnat.GoNavi
 current_package:
   version: "1.2.3"
-  submit_version: " 1.2.3"
   architecture:
     arm64:
       - url: https://github.com/Syngnat/GoNavi/releases/download/v1.2.3/GoNavi-1.2.3-Windows-Arm64-Portable.zip

@@ -11,7 +11,11 @@ function Update-SubmittedPRTitle {
         [string]$RealVersion
     )
 
-    # 两个版本号相同时，komac 生成的标题本身已经包含正确版本号，无需修改
+    # 两个版本号相同时，komac 生成的标题本身已经包含正确版本号，无需修改。
+    # 比较前统一 Trim：历史上 MSI 内置版本带过前导空格（" 1.2.3"），
+    # 若不规范化，" 1.2.3" 与 "1.2.3" 字符串判等失败会误触发标题补充。
+    $SubmitVersion = ([string]$SubmitVersion).Trim()
+    $RealVersion = ([string]$RealVersion).Trim()
     if ($SubmitVersion -eq $RealVersion) {
         Write-Log "  Submit version equals real version ($RealVersion), PR title unchanged"
         return $true

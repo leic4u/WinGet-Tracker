@@ -13,26 +13,33 @@ function Get-InstallerVersion {
     }
 
     $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
+    $version = $null
 
     switch ($extension) {
         { $_ -in '.exe', '.tmp' } {
-            return Get-ExeVersion $filePath
+            $version = Get-ExeVersion $filePath
         }
         '.msi' {
-            return Get-MsiVersion $filePath
+            $version = Get-MsiVersion $filePath
         }
         { $_ -in '.msix', '.appx' } {
-            return Get-MsixVersion $filePath
+            $version = Get-MsixVersion $filePath
         }
         default {
             # 尝试用 EXE 方式提取（临时文件可能没有正确扩展名）
-            $ver = Get-ExeVersion $filePath
-            if ($ver) { return $ver }
-
-            Write-Host "  Unsupported file type for version extraction: $extension"
-            return $null
+            $version = Get-ExeVersion $filePath
+            if (-not $version) {
+                Write-Host "  Unsupported file type for version extraction: $extension"
+            }
         }
     }
+
+    # 统一规范化：子函数返回的可能是带前后空白的字符串（如 MSI Property），
+    # 必须 Trim 后再交给版本比较与提交，避免 " 1.2.3" 被当成不同于 "1.2.3"。
+    if ($version) {
+        $version = ([string]$version).Trim()
+    }
+    return $version
 }
 
 function Get-ExeVersion {
@@ -86,7 +93,9 @@ function Get-MsiVersion {
             @($query)
         )
 
-        $view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null)
+        # Execute 无返回值，但 InvokeMember 会把 $null 写进函数输出管道，
+        # 导致 Get-InstallerVersion 返回 @($null, $version)，字符串化后出现前导空格。
+        [void]$view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null)
 
         $record = $view.GetType().InvokeMember(
             'Fetch',

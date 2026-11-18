@@ -1,7 +1,6 @@
 id: feigeCode.Navop
 current_package:
   version: "0.23.4"
-  submit_version: " 0.23.4"
   architecture:
     x64:
       - url: https://github.com/feigeCode/navop/releases/download/v0.23.4/navop-0.23.4-windows-x64.msi

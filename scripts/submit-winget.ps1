@@ -103,6 +103,11 @@ function Get-ManifestVersion {
         [string]$detectedVersion
     )
 
+    # 参数统一去空白：调用方传来的版本可能是带空格的数组/字符串。
+    $version = ([string]$version).Trim()
+    $urlVersion = ([string]$urlVersion).Trim()
+    $detectedVersion = if ($detectedVersion) { ([string]$detectedVersion).Trim() } else { $detectedVersion }
+
     $manifestVersion = $version
     $formatTemplate = Get-SubmitVersionFormat $config
 
@@ -136,7 +141,7 @@ function Get-ManifestVersion {
         $manifestVersion = $detectedVersion
     }
 
-    return $manifestVersion
+    return ([string]$manifestVersion).Trim()
 }
 
 $hasFatalError = $false
@@ -350,8 +355,10 @@ foreach ($item in $updates) {
         $id = if ($config.id) { $config.id } else { $item.id }
         # url_version 是 checkver 从 checkver.url 检测到的真实版本号；
         # 脚本内部仍用 $version 表示它，保持 PR 查重 / YAML 回写 / 标题补充逻辑不变。
-        $version = Get-UpdateDetectedVersion $item
-        $urlVersion = $version
+        # 统一规范化版本号：checkver 正则或安装包的 COM 属性都可能带前后空白，
+        # 若不 Trim，" 1.2.3" 会被当成与 "1.2.3" 不同，误触发 PR 标题补充。
+        $version = ([string](Get-UpdateDetectedVersion $item)).Trim()
+        $urlVersion = ([string]$version).Trim()
         $checkverData = if ($item.PSObject.Properties['data']) { $item.data } else { $null }
 
         Add-ReportItem -Id $id -CurrentVersion (Get-PackageCurrentVersion $config) -NewVersion ([string]$version)
@@ -448,6 +455,10 @@ foreach ($item in $updates) {
                     if (-not $detectedVersion) {
                         Write-Log "  Extracting built-in version from installer..."
                         $detectedVersion = Get-InstallerVersion $res.filePath
+                        # 兜底 Trim：即便调用的函数漏掉空白，也不能让它进入版本比较。
+                        if ($detectedVersion) {
+                            $detectedVersion = ([string]$detectedVersion).Trim()
+                        }
                         if ($detectedVersion) {
                             Write-Log "  Detected installer built-in version: $detectedVersion"
                         } else {
@@ -528,8 +539,10 @@ foreach ($item in $updates) {
         # current_package.submit_version 记录实际提交到 winget 的版本号。
         # 两者不一致时，PR 标题末尾需要补上真实版本号（如 3.32.4.141552）。
         # ========================================
-        $submitVersion = $manifestVersion
-        $versionReplaced = ($submitVersion -ne $version)
+        $submitVersion = ([string]$manifestVersion).Trim()
+        # 关键：判等必须基于 Trim 后的值。带空白的 " 1.2.3" 与 "1.2.3"
+        # 在字符串比较下不相等，会误判为「提交版本与真实版本不同」并触发补标题。
+        $versionReplaced = ($submitVersion -ne ([string]$version).Trim())
         if ($versionReplaced) {
             Write-Log "  Real version '$version' differs from submit version '$submitVersion'"
         }
