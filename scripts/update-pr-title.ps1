@@ -26,34 +26,42 @@ function Update-SubmittedPRTitle {
 
     $env:GH_TOKEN = $env:WINGET_TOKEN
     try {
-        # 优先复用 gh pr list 已查到的 PR 信息，其次用 komac 输出中的 PR URL 读取标题
+        # 全部走 REST（gh api），不用 gh pr view/edit：
+        # gh 的高层 pr 命令内部使用 GraphQL，会附带读取组织的 login/name/slug 字段，
+        # 这些字段要求 read:org scope；只有 repo scope 的 token 会报 INSUFFICIENT_SCOPES。
+        # REST 端点只按 repo/public_repo 校验，因此 token 无需额外组织权限。
+
+        # 优先复用调用方已查到的 PR 信息，其次用 komac 输出中的 PR URL
         if ($PrInfo -and $PrInfo.number) {
             $prNumber = $PrInfo.number
             $prTitle = $PrInfo.title
         }
         elseif ($PrUrl -match 'github\.com/microsoft/winget-pkgs/pull/(\d+)') {
             $prNumber = $Matches[1]
-            $prJson = gh pr view $prNumber --repo microsoft/winget-pkgs --json title 2>&1
+        }
+
+        # REST: GET /repos/{owner}/{repo}/pulls/{number} 读取标题
+        if ($prNumber -and -not $prTitle) {
+            $prJson = gh api "repos/microsoft/winget-pkgs/pulls/$prNumber" 2>&1
             $prView = $prJson | ConvertFrom-Json -ErrorAction SilentlyContinue
             if ($prView -and $prView.title) {
                 $prTitle = $prView.title
             }
         }
 
-        # 回退：按包名 + 提交版本号搜索本账号刚提交的 PR
+        # 回退：REST issue search，按包名 + 提交版本号搜索本账号刚提交的 PR。
+        # search/issues 的 item.number 即为 PR number，author:@me 限定本账号。
         if (-not $prTitle) {
-            $searchQuery = "$Id $SubmitVersion"
-            $prsJson = gh pr list `
-                --repo microsoft/winget-pkgs `
-                --state open `
-                --search "$searchQuery" `
-                --author "@me" `
-                --json number,title `
-                2>&1
-            $prs = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($prs -and $prs.Count -gt 0) {
-                $prNumber = $prs[0].number
-                $prTitle = $prs[0].title
+            $searchQuery = "repo:microsoft/winget-pkgs is:pr is:open author:@me $Id $SubmitVersion"
+            $encodedQuery = [uri]::EscapeDataString($searchQuery)
+            $prsJson = gh api "search/issues?q=$encodedQuery&per_page=10" 2>&1
+            $searchResult = $prsJson | ConvertFrom-Json -ErrorAction SilentlyContinue
+            # 必须显式 [array]：PS 5.1 下单元素数组经 if 表达式赋值会被降为标量，
+            # 标量 PSCustomObject 没有 Count 属性，会导致命中结果被误判为空。
+            [array]$items = if ($searchResult -and $searchResult.items) { @($searchResult.items) } else { @() }
+            if ($items.Count -gt 0) {
+                $prNumber = $items[0].number
+                $prTitle = $items[0].title
             }
         }
 
@@ -70,10 +78,9 @@ function Update-SubmittedPRTitle {
         }
 
         $newTitle = "$prTitle $suffix"
-        $editOutput = gh pr edit $prNumber `
-            --repo microsoft/winget-pkgs `
-            --title "$newTitle" `
-            2>&1
+        # REST: PATCH /repos/{owner}/{repo}/pulls/{number} 修改标题。
+        # -f 以字符串字段提交 JSON body，标题里的空格/括号无需额外转义。
+        $editOutput = gh api -X PATCH "repos/microsoft/winget-pkgs/pulls/$prNumber" -f "title=$newTitle" 2>&1
         if ($LASTEXITCODE -ne 0) {
             Write-Log "  Warning: Failed to update PR title: $($editOutput | Out-String)"
             return $false

@@ -622,19 +622,28 @@ foreach ($item in $updates) {
                         # 回退：komac 未打印 PR URL 时，查找本次刚创建的 PR
                         try {
                             $env:GH_TOKEN = $env:WINGET_TOKEN
-                            $searchQuery = "$id $manifestVersion"
-                            $prsJson = gh pr list `
-                                --repo microsoft/winget-pkgs `
-                                --state open `
-                                --search "$searchQuery" `
-                                --author "@me" `
-                                --json number,title,url `
-                                2>&1
-                            $prs = $prsJson | ConvertFrom-Json -ErrorAction Stop
-                            if ($prs -and $prs.Count -gt 0) {
-                                $submittedPr = $prs[0]
+                            # 走 REST search/issues，不用 gh pr list：
+                            # gh 高层 pr 命令内部用 GraphQL，在组织仓库上读取
+                            # login/name/slug 需要 read:org scope，token 只有 repo 会失败。
+                            $searchQuery = "repo:microsoft/winget-pkgs is:pr is:open author:@me $id $manifestVersion"
+                            $encodedQuery = [uri]::EscapeDataString($searchQuery)
+                            $prsJson = gh api "search/issues?q=$encodedQuery&per_page=10" 2>&1
+                            if ($LASTEXITCODE -ne 0) { throw "REST PR search failed: $($prsJson | Out-String)" }
+                            $searchResult = $prsJson | ConvertFrom-Json -ErrorAction Stop
+                            # search/issues 返回的 item.number 就是 PR number；
+                            # html_url 是浏览器链接，统一映射成下游期望的 url 字段。
+                            # 显式 [array]：PS 5.1 下单元素数组经 if 赋值会降为标量，
+                            # 标量 PSCustomObject 无 Count，会把命中结果误判为空。
+                            [array]$items = if ($searchResult -and $searchResult.items) { @($searchResult.items) } else { @() }
+                            if ($items.Count -gt 0) {
+                                $hit = $items[0]
+                                $submittedPr = [PSCustomObject]@{
+                                    number = $hit.number
+                                    title  = $hit.title
+                                    url    = $hit.html_url
+                                }
                                 $prUrl = if ($submittedPr.url) { $submittedPr.url } else { "https://github.com/microsoft/winget-pkgs/pull/$($submittedPr.number)" }
-                                Write-Log "  Submitted PR URL from gh search: $prUrl"
+                                Write-Log "  Submitted PR URL from REST search: $prUrl"
                             }
                         } catch {
                             Write-Log "  Warning: Failed to retrieve submitted PR URL: $_"
