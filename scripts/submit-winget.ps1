@@ -468,31 +468,28 @@ foreach ($item in $updates) {
                 }
             }
 
-            if ($processedDownloads.Count -eq 0) {
-                Write-Log "  Error: No valid downloads after hash calculation"
-                $downloadErrorText = if ($downloadErrors.Count -gt 0) {
-                    $firstFailed = $downloadErrors[0]
-                    $text = "$($firstFailed.url) 下载失败"
-                    if ($downloadErrors.Count -gt 1) {
-                        $text += "（共 $($downloadErrors.Count) 个下载失败）"
-                    }
-                    elseif ($firstFailed.Error) {
-                        $text += "（$(Limit-ReportText $firstFailed.Error 160)）"
-                    }
-                    $text
-                }
-                else {
-                    "下载或哈希计算失败"
-                }
+            # 任一架构下载失败就必须整批跳过：winget manifest 要求架构齐全，
+            # 只提交成功的架构会产生缺 x64/arm64 的 PR。
+            # 关键：这里不回写 current_package.version，下一轮定时任务在资产
+            # 补齐后仍会判定为有更新并重新处理。
+            if ($downloadErrors.Count -gt 0) {
+                $failedArchs = @($downloadErrors | ForEach-Object { $_.arch }) -join ', '
+                $firstFailed = $downloadErrors[0]
+                $reason = if ($firstFailed.Error) { Limit-ReportText $firstFailed.Error 120 } else { "下载失败" }
+                $downloadErrorText = "架构 $failedArchs 资产下载失败（$reason）；本轮跳过提交，等待下一轮资产补齐"
+                Write-Log "  Error: $downloadErrorText"
                 Set-ReportStatus -Id $id -Status "error" -Error $downloadErrorText
                 Save-NotificationReport -Path $reportFile
                 $hasFatalError = $true
                 continue
             }
 
-            # 部分架构下载失败时，记录为警告（不影响其他架构提交）
-            foreach ($failedDownload in $downloadErrors) {
-                Add-ReportWarning -Id $id -Message "$($failedDownload.url) 下载失败"
+            if ($processedDownloads.Count -eq 0) {
+                Write-Log "  Error: No valid downloads after hash calculation"
+                Set-ReportStatus -Id $id -Status "error" -Error "下载或哈希计算失败"
+                Save-NotificationReport -Path $reportFile
+                $hasFatalError = $true
+                continue
             }
 
             # 决定提交到 winget 的 manifest 版本号

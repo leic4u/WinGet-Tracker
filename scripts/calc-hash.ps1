@@ -1,3 +1,44 @@
+function Get-DownloadErrorText {
+    param($ErrorRecord, [int]$MaxLength = 160)
+
+    # Invoke-WebRequest 遇到 404/403 时会把整个 HTML 响应体塞进 ErrorRecord，
+    # 直接写日志会让单个 run 膨胀到几百 KB。这里只保留简洁的错误摘要。
+    $message = if ($ErrorRecord -and $ErrorRecord.Exception) { $ErrorRecord.Exception.Message } else { [string]$ErrorRecord }
+    $text = ($message -split "`r?`n")[0].Trim()
+
+    $statusCode = $null
+    try {
+        if ($ErrorRecord.Exception.Response) {
+            $statusCode = [int]$ErrorRecord.Exception.Response.StatusCode
+        }
+    } catch { }
+
+    if ($text -match '<!DOCTYPE|<html|Page not found') {
+        $text = "response body omitted"
+    }
+    if ($statusCode) {
+        $text = "HTTP $statusCode $text"
+    }
+    if (-not $text) { $text = "unknown error" }
+    if ($text.Length -gt $MaxLength) {
+        $text = $text.Substring(0, $MaxLength) + "..."
+    }
+    return $text
+}
+
+function Test-IsNotFoundResponse {
+    param($ErrorRecord)
+
+    try {
+        if ($ErrorRecord.Exception.Response -and [int]$ErrorRecord.Exception.Response.StatusCode -eq 404) {
+            return $true
+        }
+    } catch { }
+
+    $message = if ($ErrorRecord.Exception) { [string]$ErrorRecord.Exception.Message } else { [string]$ErrorRecord }
+    return ($message -match '\(404\)|404 Not Found')
+}
+
 function Get-InstallerHash {
     param(
         [string]$url
@@ -27,12 +68,20 @@ function Get-InstallerHash {
                 Invoke-WebRequest $url -OutFile $tmp -UseBasicParsing -ErrorAction Stop
                 $success = $true
             } catch {
+                $errorText = Get-DownloadErrorText $_
+
+                # 404 通常是 release 已发布但资产尚未上传完成，短时间内重试没有意义。
+                # 直接失败，由调用方整批跳过，等下一轮定时任务资产齐了再处理。
+                if (Test-IsNotFoundResponse $_) {
+                    throw "Asset not found (404), likely still uploading: $errorText"
+                }
+
                 $retryCount++
                 if ($retryCount -lt $maxRetries) {
-                    Write-Warning "  Download failed, retrying ($retryCount/$maxRetries): $_"
+                    Write-Warning "  Download failed, retrying ($retryCount/$maxRetries): $errorText"
                     Start-Sleep -Seconds (5 * $retryCount)  # 指数退避
                 } else {
-                    throw "Failed to download after $maxRetries attempts: $_"
+                    throw "Failed to download after $maxRetries attempts: $errorText"
                 }
             }
         }
