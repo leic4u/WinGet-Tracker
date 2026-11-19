@@ -1,9 +1,9 @@
 id: XiaoYouChR.GhostDownloader
 current_package:
-  version: "4.5.8"
+  version: "4.5.7"
   architecture:
     arm64:
-      - url: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.5.8/Ghost-Downloader-v4.5.8-Windows-arm64-Setup.exe
+      - url: https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.5.7/Ghost-Downloader-v4.5.7-Windows-arm64-Setup.exe
         hash: 4E2014E3C9CE1D1F6C45C0ABCB4CE3B538A721D4AE7C4490870426D3641F34F8
 checkver:
   url: "https://github.com/XiaoYouChR/Ghost-Downloader-3"
