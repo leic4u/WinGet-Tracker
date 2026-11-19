@@ -1,12 +1,12 @@
 id: 0xErwin1.DBFlux
 current_package:
-  version: "0.10.1"
+  version: "0.10.2"
   architecture:
     x64:
-      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.10.1/dbflux-windows-amd64.zip
-        hash: 75AF251F926B0F78C14AD37AFA2EB2B98FE6BBB0252197BC3DB7D96C28CED26E
-      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.10.1/dbflux-windows-amd64-setup.exe
-        hash: 829DA8F3E29FB85F59D474F12CBF01F6FBEE386A403A1C359B732DC55FB96C3E
+      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.10.2/dbflux-windows-amd64-setup.exe
+        hash: DBAC0C202D578B06A235770DA19C604923D0048F4C60899784DB9A51E208D007
+      - url: https://github.com/0xErwin1/dbflux/releases/download/v0.10.2/dbflux-windows-amd64.zip
+        hash: 7358D245C0ABF413C7CBB4802F3022476FD01E705A25F9AB7E9540FCCBDFCC23
 checkver:
   url: "https://github.com/0xErwin1/dbflux"
 autoupdate:
@@ -14,4 +14,4 @@ autoupdate:
     x64:
       - https://github.com/0xErwin1/dbflux/releases/download/v$version/dbflux-windows-amd64-setup.exe
       - https://github.com/0xErwin1/dbflux/releases/download/v$version/dbflux-windows-amd64.zip
-pr: https://github.com/microsoft/winget-pkgs/pull/480587
+pr: https://github.com/microsoft/winget-pkgs/pull/484477
