@@ -1,13 +1,13 @@
 id: t8y2.DBX
 current_package:
-  version: "0.6.73"
+  version: "0.6.74"
   architecture:
     arm64:
-      - url: https://github.com/t8y2/dbx/releases/download/v0.6.73/DBX_0.6.73_arm64-setup.exe
-        hash: 177CE4E48D828704350D0DB5125A3137A17CD577BDB400842C958B7B90CFB05E
+      - url: https://github.com/t8y2/dbx/releases/download/v0.6.74/DBX_0.6.74_arm64-setup.exe
+        hash: 3313020B880415BCA8E04A23D3DDFA95FD712D94F9FF00E75726DB4A8E366D1D
     x64:
-      - url: https://github.com/t8y2/dbx/releases/download/v0.6.73/DBX_0.6.73_x64-setup.exe
-        hash: 0820874BB86C12D0089D24FD6AC4C1F04A5017EF9BA50199EF9189D1FE020F70
+      - url: https://github.com/t8y2/dbx/releases/download/v0.6.74/DBX_0.6.74_x64-setup.exe
+        hash: 62ADBCDA7CE0EDC2ACEB6CD4D4F7F73B4558FB35DDA7DBFF6C4763EAD0F6E933
 checkver:
   url: "https://github.com/t8y2/dbx"
 autoupdate:
@@ -15,4 +15,4 @@ autoupdate:
   architecture:
     x64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_x64-setup.exe
     arm64: https://github.com/t8y2/dbx/releases/download/v$version/DBX_$version_arm64-setup.exe
-pr: https://github.com/microsoft/winget-pkgs/pull/487705
+pr: https://github.com/microsoft/winget-pkgs/pull/487969
